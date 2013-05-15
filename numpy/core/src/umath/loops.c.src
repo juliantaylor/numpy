@@ -20,6 +20,10 @@
 
 #include "ufunc_object.h"
 
+#ifdef HAVE_EMMINTRIN_H
+#include <emmintrin.h>
+#endif
+
 
 /*
  *****************************************************************************
@@ -30,6 +34,10 @@
 #define IS_BINARY_REDUCE ((args[0] == args[2])\
         && (steps[0] == steps[2])\
         && (steps[0] == 0))
+
+#define IS_BLOCKABLE_UNARY(esize, vsize) \
+    (steps[0] == (esize) && steps[0] == steps[1] && \
+     abs(args[1] - args[0]) >= (vsize))
 
 #define OUTPUT_LOOP\
     char *op1 = args[1];\
@@ -52,12 +60,30 @@
     npy_intp i;\
     for(i = 0; i < n; i++, ip1 += is1, op1 += os1, op2 += os2)
 
+#define UNARY_LOOP_BLOCKED(type, vsize)\
+    type *ip1 = (type *)args[0], *op1 = (type *)args[1];\
+    npy_intp n = dimensions[0];\
+    npy_intp i;\
+    for(i = 0; i < n - (n % (vsize / sizeof(type)));\
+        i += (vsize / sizeof(type)))
+
+#define UNARY_LOOP_BLOCKED_END\
+    for (; i < n; i++)
+
 #define BINARY_LOOP\
     char *ip1 = args[0], *ip2 = args[1], *op1 = args[2];\
     npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];\
     npy_intp n = dimensions[0];\
     npy_intp i;\
     for(i = 0; i < n; i++, ip1 += is1, ip2 += is2, op1 += os1)
+
+#define BINARY_LOOP_BLOCKED(type, vsize)\
+    type *ip1 = (type *)args[0], *ip2 = (type *)args[1],\
+                *op1 = (type *)args[2];\
+    npy_intp n = dimensions[0];\
+    npy_intp i;\
+    for(i = 0; i < n - (n % (vsize / sizeof(type)));\
+        i += (vsize / sizeof(type)))
 
 #define BINARY_REDUCE_LOOP_INNER\
     char *ip2 = args[1]; \
@@ -131,9 +157,22 @@ NPY_NO_EXPORT void
 PyUFunc_f_f(char **args, npy_intp *dimensions, npy_intp *steps, void *func)
 {
     floatUnaryFunc *f = (floatUnaryFunc *)func;
-    UNARY_LOOP {
-        const float in1 = *(float *)ip1;
-        *(float *)op1 = f(in1);
+#ifdef HAVE_EMMINTRIN_H
+    if (f == npy_sqrtf && IS_BLOCKABLE_UNARY(sizeof(float), 16)) {
+        UNARY_LOOP_BLOCKED(float, 16) {
+            __m128 d = _mm_loadu_ps(&ip1[i]);
+            _mm_storeu_ps(&op1[i], _mm_sqrt_ps(d));
+        }
+        UNARY_LOOP_BLOCKED_END
+            op1[i] = npy_sqrtf(ip1[i]);
+    }
+    else
+#endif
+    {
+        UNARY_LOOP {
+            const float in1 = *(float *)ip1;
+            *(float *)op1 = f(in1);
+        }
     }
 }
 
@@ -213,9 +252,23 @@ NPY_NO_EXPORT void
 PyUFunc_d_d(char **args, npy_intp *dimensions, npy_intp *steps, void *func)
 {
     doubleUnaryFunc *f = (doubleUnaryFunc *)func;
-    UNARY_LOOP {
-        double in1 = *(double *)ip1;
-        *(double *)op1 = f(in1);
+#ifdef HAVE_EMMINTRIN_H
+    if (f == npy_sqrt && IS_BLOCKABLE_UNARY(sizeof(double), 16)) {
+        UNARY_LOOP_BLOCKED(double, 16) {
+            __m128d d = _mm_loadu_pd(&ip1[i]);
+            _mm_storeu_pd(&op1[i], _mm_sqrt_pd(d));
+        }
+        UNARY_LOOP_BLOCKED_END
+            op1[i] = npy_sqrt(ip1[i]);
+    }
+    else
+#endif
+    {
+
+        UNARY_LOOP {
+            double in1 = *(double *)ip1;
+            *(double *)op1 = f(in1);
+        }
     }
 }
 

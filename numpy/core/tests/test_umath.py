@@ -100,6 +100,13 @@ class TestPower(TestCase):
         assert_almost_equal(x**(-1), [1., 0.5, 1./3])
         assert_almost_equal(x**(0.5), [1., ncu.sqrt(2), ncu.sqrt(3)])
 
+        # test a couple simd blocking cases
+        for n in range(17):
+            x = np.arange(n, dtype=np.float64)
+            assert_almost_equal(x**(0.5), [ncu.sqrt(i) for i in range(n)])
+            x = np.arange(n, dtype=np.float32)
+            assert_almost_equal(x**(0.5), [ncu.sqrt(i) for i in range(n)])
+
     def test_power_complex(self):
         x = np.array([1+2j, 2+3j, 3+4j])
         assert_equal(x**0, [1., 1., 1.])
