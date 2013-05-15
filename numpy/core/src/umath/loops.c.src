@@ -30,9 +30,17 @@
     defined HAVE___BUILTIN_IA32_MULPS && defined HAVE___BUILTIN_IA32_MULPD &&\
     defined HAVE___BUILTIN_IA32_DIVPS && defined HAVE___BUILTIN_IA32_DIVPD
 
-#define NPY_HAVE_BASE_SSE_MATH
     typedef float npy_v4f __attribute__ ((vector_size (16)));
     typedef double npy_v2d __attribute__ ((vector_size (16)));
+    typedef union {
+        npy_v4f vec;
+        float v[4];
+    } npy_v4fu;
+    typedef union {
+        npy_v2d vec;
+        double v[2];
+    } npy_v2du;
+#define NPY_HAVE_BASE_SSE_MATH
 #endif
 #endif
 
@@ -62,6 +70,9 @@
 #define IS_BLOCKABLE_UNARY(esize, vsize) \
     (steps[0] == (esize) && steps[0] == steps[1] && \
      abs(args[1] - args[0]) >= (vsize))
+
+#define IS_BLOCKABLE_REDUCE(esize, vsize) \
+    (steps[1] == (esize) && abs(args[1] - args[0]) >= (vsize))
 
 #define OUTPUT_LOOP\
     char *op1 = args[1];\
@@ -123,6 +134,19 @@
     char *iop1 = args[0]; \
     TYPE io1 = *(TYPE *)iop1; \
     BINARY_REDUCE_LOOP_INNER
+
+#define BINARY_REDUCE_LOOP_BLOCKED(type, vsize, vname, loadf)\
+    type *op1 = (type*)args[0], *ip2 = (type*)args[1];\
+    npy_intp n = dimensions[0];\
+    npy_intp i;\
+    if (n >= (vsize) / sizeof(type))\
+        vname = loadf(ip2); \
+    for(i = vsize / sizeof(type);\
+        i < n - (n % (vsize / sizeof(type)));\
+        i += (vsize / sizeof(type)))
+
+#define BINARY_REDUCE_LOOP_BLOCKED_END\
+    for (; i < n; i++)
 
 #define BINARY_LOOP_TWO_OUT\
     char *ip1 = args[0], *ip2 = args[1], *op1 = args[2], *op2 = args[3];\
@@ -1365,10 +1389,47 @@ TIMEDELTA_mm_d_divide(char **args, npy_intp *dimensions, npy_intp *steps, void *
 @TYPE@_@kind@(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
 {
     if(IS_BINARY_REDUCE) {
-        BINARY_REDUCE_LOOP(@type@) {
-            io1 @OP@= *(@type@ *)ip2;
+#ifdef NPY_HAVE_BASE_SSE_MATH
+        if (strcmp("@TYPE@", "FLOAT") == 0 &&
+            (strcmp("@OP@", "+") == 0 || strcmp("@OP@", "*") == 0) &&
+            IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
+            npy_v4fu c;
+            BINARY_REDUCE_LOOP_BLOCKED(@type@, 16, c.vec,
+                                       __builtin_ia32_loadups) {
+                c.vec @OP@= __builtin_ia32_loadups((float*)&ip2[i]);
+            }
+            /* no blocked iteration, reset counter */
+            if (i == 16 / sizeof(@type@))
+                i = 0;
+            else
+                *op1 @OP@= c.v[0] @OP@ c.v[1] @OP@ c.v[2] @OP@ c.v[3];
+            BINARY_REDUCE_LOOP_BLOCKED_END
+                *op1 @OP@= ip2[i];
         }
-        *((@type@ *)iop1) = io1;
+        else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
+                 (strcmp("@OP@", "+") == 0 || strcmp("@OP@", "*") == 0) &&
+                 IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
+            npy_v2du c;
+            BINARY_REDUCE_LOOP_BLOCKED(@type@, 16, c.vec,
+                                       __builtin_ia32_loadupd) {
+                c.vec @OP@= __builtin_ia32_loadupd((double*)&ip2[i]);
+            }
+            /* no blocked iteration, reset counter */
+            if (i == 16 / sizeof(@type@))
+                i = 0;
+            else
+                *op1 @OP@= c.v[0] @OP@ c.v[1];
+            BINARY_REDUCE_LOOP_BLOCKED_END
+                *op1 @OP@= ip2[i];
+        }
+        else
+#endif
+        {
+            BINARY_REDUCE_LOOP(@type@) {
+                io1 @OP@= *(@type@ *)ip2;
+            }
+            *((@type@ *)iop1) = io1;
+        }
     }
     else {
 #ifdef NPY_HAVE_BASE_SSE_MATH

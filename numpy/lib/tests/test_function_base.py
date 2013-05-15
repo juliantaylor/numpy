@@ -291,7 +291,7 @@ class TestCumsum(TestCase):
 
 class TestProd(TestCase):
     def test_basic(self):
-        ba = [1, 2, 10, 11, 6, 5, 4]
+        ba = [1, 2, 10, 11, 6, 5, 4, 3]
         ba2 = [[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]]
         for ctype in [np.int16, np.uint16, np.int32, np.uint32,
                       np.float32, np.float64, np.complex64, np.complex128]:
@@ -302,7 +302,7 @@ class TestProd(TestCase):
                 self.assertRaises(ArithmeticError, prod, a2, 1)
                 self.assertRaises(ArithmeticError, prod, a)
             else:
-                assert_equal(np.prod(a, axis=0), 26400)
+                assert_equal(np.prod(a, axis=0), 26400*3)
                 assert_array_equal(np.prod(a2, axis=0),
                         np.array([50, 36, 84, 180], ctype))
                 assert_array_equal(np.prod(a2, axis= -1),
@@ -918,7 +918,7 @@ class TestHistogram(TestCase):
         # Weights
         w = np.arange(10) + .5
         h, b = histogram(a, range=[1, 9], weights=w, normed=True)
-        assert_equal((h * diff(b)).sum(), 1)
+        assert_almost_equal((h * diff(b)).sum(), 1)
 
         h, b = histogram(a, bins=8, range=[1, 9], weights=w)
         assert_equal(h, w[1:-1])
