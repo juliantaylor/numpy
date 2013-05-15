@@ -101,6 +101,9 @@ OPTIONAL_STDFUNCS = ["expm1", "log1p", "acosh", "asinh", "atanh",
 OPTIONAL_HEADERS = ["emmintrin.h" # SSE2, amd64 only
 ]
 
+# trick to get a vector type without a typedef
+_v4f = '__builtin_ia32_loadups((float*)1)'
+_v2d = '__builtin_ia32_loadupd((double*)1)'
 # optional gcc compiler builtins and their call arguments
 # call arguments are required as the compiler will do strict signature checking
 OPTIONAL_INTRINSICS = [("__builtin_isnan", '5.'),
@@ -108,6 +111,14 @@ OPTIONAL_INTRINSICS = [("__builtin_isnan", '5.'),
                        ("__builtin_isfinite", '5.'),
                        ("__builtin_bswap32", '5u'),
                        ("__builtin_bswap64", '5u'),
+                       ("__builtin_ia32_loadups", '(float*)1'),
+                       ("__builtin_ia32_loadupd", '(double*)1'),
+                       ("__builtin_ia32_addps", "%s, %s" % (_v4f, _v4f)),
+                       ("__builtin_ia32_addpd", "%s, %s" % (_v2d, _v2d)),
+                       ("__builtin_ia32_mulps", "%s, %s" % (_v4f, _v4f)),
+                       ("__builtin_ia32_mulpd", "%s, %s" % (_v2d, _v2d)),
+                       ("__builtin_ia32_divps", "%s, %s" % (_v4f, _v4f)),
+                       ("__builtin_ia32_divpd", "%s, %s" % (_v2d, _v2d)),
                        ]
 
 # Subset of OPTIONAL_STDFUNCS which may alreay have HAVE_* defined by Python.h

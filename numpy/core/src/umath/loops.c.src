@@ -19,9 +19,21 @@
 #include "npy_pycompat.h"
 
 #include "ufunc_object.h"
+#include <string.h>
 
 #ifdef HAVE_EMMINTRIN_H
 #include <emmintrin.h>
+#endif
+
+#ifndef NPY_HAVE_BASE_SSE_MATH
+#if defined HAVE___BUILTIN_IA32_ADDPS && defined HAVE___BUILTIN_IA32_ADDPD &&\
+    defined HAVE___BUILTIN_IA32_MULPS && defined HAVE___BUILTIN_IA32_MULPD &&\
+    defined HAVE___BUILTIN_IA32_DIVPS && defined HAVE___BUILTIN_IA32_DIVPD
+
+#define NPY_HAVE_BASE_SSE_MATH
+    typedef float npy_v4f __attribute__ ((vector_size (16)));
+    typedef double npy_v2d __attribute__ ((vector_size (16)));
+#endif
 #endif
 
 
@@ -34,6 +46,18 @@
 #define IS_BINARY_REDUCE ((args[0] == args[2])\
         && (steps[0] == steps[2])\
         && (steps[0] == 0))
+
+#define IS_BLOCKABLE(esize, vsize) \
+    (steps[0] == steps[1] && steps[1] == steps[2] && steps[2] == (esize) && \
+    abs(args[2] - args[0]) >= (vsize) && abs(args[2] - args[1]) >= (vsize))
+
+#define IS_BLOCKABLE_SCALAR1(esize, vsize) \
+    (steps[0] == 0 && steps[1] == steps[2] && steps[2] == (esize) && \
+    abs(args[2] - args[0]) >= (esize) && abs(args[2] - args[1]) >= (vsize))
+
+#define IS_BLOCKABLE_SCALAR2(esize, vsize) \
+    (steps[1] == 0 && steps[0] == steps[2] && steps[2] == (esize) && \
+    abs(args[2] - args[0]) >= (vsize) && abs(args[2] - args[1]) >= (esize))
 
 #define IS_BLOCKABLE_UNARY(esize, vsize) \
     (steps[0] == (esize) && steps[0] == steps[1] && \
@@ -84,6 +108,9 @@
     npy_intp i;\
     for(i = 0; i < n - (n % (vsize / sizeof(type)));\
         i += (vsize / sizeof(type)))
+
+#define BINARY_LOOP_BLOCKED_END\
+    for (; i < n; i++)
 
 #define BINARY_REDUCE_LOOP_INNER\
     char *ip2 = args[1]; \
@@ -1334,7 +1361,7 @@ TIMEDELTA_mm_d_divide(char **args, npy_intp *dimensions, npy_intp *steps, void *
  * # kind = add, subtract, multiply, divide#
  * # OP = +, -, *, /#
  */
-NPY_NO_EXPORT void
+    NPY_NO_EXPORT void
 @TYPE@_@kind@(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
 {
     if(IS_BINARY_REDUCE) {
@@ -1344,10 +1371,86 @@ NPY_NO_EXPORT void
         *((@type@ *)iop1) = io1;
     }
     else {
-        BINARY_LOOP {
-            const @type@ in1 = *(@type@ *)ip1;
-            const @type@ in2 = *(@type@ *)ip2;
-            *((@type@ *)op1) = in1 @OP@ in2;
+#ifdef NPY_HAVE_BASE_SSE_MATH
+        /* all constant -> compile time evaluation */
+        if (strcmp("@TYPE@", "FLOAT") == 0 &&
+            IS_BLOCKABLE(sizeof(float), 16)) {
+            BINARY_LOOP_BLOCKED(float, 16) {
+                npy_v4f a = __builtin_ia32_loadups(&ip1[i]);
+                npy_v4f b = __builtin_ia32_loadups(&ip2[i]);
+                npy_v4f c = a @OP@ b;
+                __builtin_ia32_storeups(&op1[i], c);
+            }
+            BINARY_LOOP_BLOCKED_END
+                op1[i] = ip1[i] @OP@ ip2[i];
+        }
+        /* argument one scalar */
+        else if (strcmp("@TYPE@", "FLOAT") == 0 &&
+                 IS_BLOCKABLE_SCALAR1(sizeof(float), 16)) {
+            BINARY_LOOP_BLOCKED(float, 16) {
+                const npy_v4f a = (npy_v4f){ ip1[0], ip1[0], ip1[0], ip1[0] };
+                npy_v4f b = __builtin_ia32_loadups(&ip2[i]);
+                npy_v4f c = a @OP@ b;
+                __builtin_ia32_storeups(&op1[i], c);
+            }
+            BINARY_LOOP_BLOCKED_END
+                op1[i] = ip1[0] @OP@ ip2[i];
+        }
+        /* argument two scalar */
+        else if (strcmp("@TYPE@", "FLOAT") == 0 &&
+                 IS_BLOCKABLE_SCALAR2(sizeof(float), 16)) {
+            BINARY_LOOP_BLOCKED(float, 16) {
+                const npy_v4f b = (npy_v4f){ ip2[0], ip2[0], ip2[0], ip2[0] };
+                npy_v4f a = __builtin_ia32_loadups(&ip1[i]);
+                npy_v4f c = a @OP@ b;
+                __builtin_ia32_storeups(&op1[i], c);
+            }
+            BINARY_LOOP_BLOCKED_END
+                op1[i] = ip1[i] @OP@ ip2[0];
+        }
+        else if (strcmp("@TYPE", "DOUBLE") == 0 &&
+                 IS_BLOCKABLE(sizeof(double), 16)) {
+            BINARY_LOOP_BLOCKED(double, 16) {
+                npy_v2d a = __builtin_ia32_loadupd(&ip1[i]);
+                npy_v2d b = __builtin_ia32_loadupd(&ip2[i]);
+                npy_v2d c = a @OP@ b;
+                __builtin_ia32_storeupd(&op1[i], c);
+            }
+            BINARY_LOOP_BLOCKED_END
+                op1[i] = ip1[i] @OP@ ip2[i];
+        }
+        /* argument one scalar */
+        else if (strcmp("@TYPE", "DOUBLE") == 0 &&
+                 IS_BLOCKABLE_SCALAR1(sizeof(double), 16)) {
+            BINARY_LOOP_BLOCKED(double, 16) {
+                const npy_v2d a = (npy_v2d){ ip1[0], ip1[0] };
+                npy_v2d b = __builtin_ia32_loadupd(&ip2[i]);
+                npy_v2d c = a @OP@ b;
+                __builtin_ia32_storeupd(&op1[i], c);
+            }
+            BINARY_LOOP_BLOCKED_END
+                op1[i] = ip1[0] @OP@ ip2[i];
+        }
+        /* argument two scalar */
+        else if (strcmp("@TYPE", "DOUBLE") == 0 &&
+                 IS_BLOCKABLE_SCALAR2(sizeof(double), 16)) {
+            BINARY_LOOP_BLOCKED(double, 16) {
+                const npy_v2d b = (npy_v2d){ ip2[0], ip2[0] };
+                npy_v2d a = __builtin_ia32_loadupd(&ip1[i]);
+                npy_v2d c = a @OP@ b;
+                __builtin_ia32_storeupd(&op1[i], c);
+            }
+            BINARY_LOOP_BLOCKED_END
+                op1[i] = ip1[i] @OP@ ip2[0];
+        }
+        else
+#endif
+        {
+            BINARY_LOOP {
+                const @type@ in1 = *(@type@ *)ip1;
+                const @type@ in2 = *(@type@ *)ip2;
+                *((@type@ *)op1) = in1 @OP@ in2;
+            }
         }
     }
 }
