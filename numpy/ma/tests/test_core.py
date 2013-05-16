@@ -945,6 +945,20 @@ class TestMaskedArrayArithmetic(TestCase):
         self.assertTrue(x.max() is masked)
         self.assertTrue(x.ptp() is masked)
 
+    def test_minmax_blocked(self):
+        "simd tests on max/min"
+        for dt in [np.float32, np.float64]:
+            for n in range(1, 17):
+                for i in range(n):
+                    d = np.arange(n, dtype=dt);
+                    d[i] = np.nan
+                    self.assertTrue(np.isnan(d.max()), msg=repr(d))
+                    self.assertTrue(np.isnan(d.min()), msg=repr(d))
+
+                    d[i] = 1e10
+                    assert_equal(d.max(), 1e10)
+                    d[i] = -1e10
+                    assert_equal(d.min(), -1e10)
 
     def test_addsumprod (self):
         "Tests add, sum, product."
