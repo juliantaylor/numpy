@@ -1644,10 +1644,11 @@ NPY_NO_EXPORT void
                 if (_mm_movemask_ps(cnan))
                     *op1 = NPY_NANF;
                 else {
-                    float m[4] __attribute__((aligned(16)));
-                    _mm_store_ps(m, c);
+                    /* could be done in simd registers for minor speed gain*/
+                    @type@ m[16 / sizeof(@type@)];
                     int g;
-                    for (g = 0; g < 4; g++) {
+                    _mm_storeu_ps(m, c);
+                    for (g = 0; g < sizeof(m) / sizeof(m[0]); g++) {
                         /* handle nan in pre loop load */
                         *op1 = (*op1 @OP@ ip2[g] || npy_isnan(*op1)) ? *op1 : ip2[g];
                         *op1 = (*op1 @OP@ m[g] || npy_isnan(*op1)) ? *op1 : m[g];
@@ -1678,10 +1679,11 @@ NPY_NO_EXPORT void
                 if (_mm_movemask_pd(cnan))
                     *op1 = NPY_NAN;
                 else {
-                    double m[2] __attribute__((aligned(16)));
-                    _mm_store_pd(m, c);
+                    /* could be done in simd registers for minor speed gain*/
+                    @type@ m[16 / sizeof(@type@)];
                     int g;
-                    for (g = 0; g < 2; g++) {
+                    _mm_storeu_pd(m, c);
+                    for (g = 0; g < sizeof(m) / sizeof(m[0]); g++) {
                         /* handle nan in pre loop load */
                         *op1 = (*op1 @OP@ ip2[g] || npy_isnan(*op1)) ? *op1 : ip2[g];
                         *op1 = (*op1 @OP@ m[g] || npy_isnan(*op1)) ? *op1 : m[g];
