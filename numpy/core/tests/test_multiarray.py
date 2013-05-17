@@ -2935,5 +2935,27 @@ class TestMapIter(TestCase):
 
 
 
+class TestByteSwap(TestCase):
+    def setUp(self):
+        self.dtype = [np.int16, np.int32, np.int64]
+        self.s5 = {np.int16: 1280, np.int32: 83886080,
+                   np.int64: 360287970189639680}
+
+    def test_basics(self):
+        for dt in self.dtype:
+            # check different and sizes and offets for loop blocking
+            for o in range(0, 8):
+                for s in range(1, 20):
+                    a = np.arange(s, dtype=dt)[o:]
+                    sw = a.byteswap()
+                    a.byteswap(True)
+                    assert_equal(a, sw)
+
+                    a = np.zeros((s,), dtype=dt)[o:] + 5
+                    sw = np.zeros((s,), dtype=dt)[o:] + self.s5[dt]
+                    a.byteswap(True)
+                    assert_equal(a, sw)
+
+
 if __name__ == "__main__":
     run_module_suite()
