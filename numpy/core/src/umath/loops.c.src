@@ -15,6 +15,7 @@
 #include "numpy/ufuncobject.h"
 #include "numpy/npy_math.h"
 #include "numpy/halffloat.h"
+#include "lowlevel_strided_loops.h"
 
 #include "npy_pycompat.h"
 
@@ -99,7 +100,7 @@
     type *ip1 = (type *)args[0], *op1 = (type *)args[1];\
     npy_intp n = dimensions[0];\
     npy_intp i;\
-    for(i = 0; i < n - (n % (vsize / sizeof(type)));\
+    for(i = 0; i < npy_blocked_end(0, sizeof(type), vsize, n);\
         i += (vsize / sizeof(type)))
 
 #define UNARY_LOOP_BLOCKED_END\
@@ -117,7 +118,7 @@
                 *op1 = (type *)args[2];\
     npy_intp n = dimensions[0];\
     npy_intp i;\
-    for(i = 0; i < n - (n % (vsize / sizeof(type)));\
+    for(i = 0; i < npy_blocked_end(0, sizeof(type), vsize, n);\
         i += (vsize / sizeof(type)))
 
 #define BINARY_LOOP_BLOCKED_END\
@@ -135,24 +136,14 @@
     TYPE io1 = *(TYPE *)iop1; \
     BINARY_REDUCE_LOOP_INNER
 
-static size_t
-get_peel(const void * addr, const size_t esize,
-         const size_t nvals, const size_t alignment)
-{
-    const size_t offset = (size_t)addr % alignment;
-    size_t peel = offset ? (alignment - offset) / esize : 0;
-    peel = nvals < peel ? nvals : peel;
-    return peel;
-}
-
 #define BINARY_REDUCE_LOOP_PEEL(type, vsize)\
     type *op1 = (type*)args[0], *ip2 = (type*)args[1];\
     npy_intp n = dimensions[0];\
-    npy_intp i, peel = get_peel(ip2, sizeof(type), n, vsize);\
+    npy_intp i, peel = npy_blocked_peel(ip2, sizeof(type), vsize, n);\
     for(i = 0; i < peel; i++)
 
 #define BINARY_REDUCE_LOOP_BLOCKED(type, vsize)\
-    for(; i < (n - peel) - ((n - peel) % (vsize / sizeof(type)));\
+    for(; i < npy_blocked_end(peel, sizeof(type), vsize, n);\
         i += (vsize / sizeof(type)))
 
 #define BINARY_REDUCE_LOOP_BLOCKED_END\
