@@ -15,6 +15,7 @@ if __name__ == "__main__":
     #last won't fit in L3 cache of most cpus
     for s in [5, 10000, 500000, 1000000]:
         print '%.1f, %.1f' % (s/1024. * 4, s/1024. * 8)
+        time("d.byteswap()", "np.int16", s)
         for dt in ["np.float32", "np.float64"]:
             time("np.max(d)", dt, s)
             time("np.min(d)", dt, s)
