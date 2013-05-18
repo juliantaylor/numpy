@@ -687,7 +687,8 @@ def configuration(parent_package='',top_path=None):
     config.add_library('npysort',
             sources = [join('src', 'npysort', 'quicksort.c.src'),
                        join('src', 'npysort', 'mergesort.c.src'),
-                       join('src', 'npysort', 'heapsort.c.src')])
+                       join('src', 'npysort', 'heapsort.c.src'),
+                       join('src', 'npysort', 'quickselect.c.src')])
 
 
     #######################################################################
