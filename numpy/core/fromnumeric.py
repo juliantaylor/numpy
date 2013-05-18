@@ -16,7 +16,7 @@ _dt_ = nt.sctype2char
 
 # functions that are now methods
 __all__ = ['take', 'reshape', 'choose', 'repeat', 'put',
-           'swapaxes', 'transpose', 'sort', 'argsort', 'argmax', 'argmin',
+           'swapaxes', 'transpose', 'sort', 'argsort', 'partition', 'argmax', 'argmin',
            'searchsorted', 'alen',
            'resize', 'diagonal', 'trace', 'ravel', 'nonzero', 'shape',
            'compress', 'clip', 'sum', 'product', 'prod', 'sometrue', 'alltrue',
@@ -532,6 +532,16 @@ def transpose(a, axes=None):
     except AttributeError:
         return _wrapit(a, 'transpose', axes)
     return transpose(axes)
+
+
+def partition(a, kth, axis=-1):
+    if axis is None:
+        a = asanyarray(a).flatten()
+        axis = 0
+    else:
+        a = asanyarray(a).copy()
+    a.partition(kth, axis=axis)
+    return a
 
 
 def sort(a, axis=-1, kind='quicksort', order=None):

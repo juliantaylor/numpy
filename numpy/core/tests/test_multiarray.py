@@ -19,7 +19,8 @@ from numpy.core.multiarray_tests import (
 from numpy.testing import (
         TestCase, run_module_suite, assert_, assert_raises,
         assert_equal, assert_almost_equal, assert_array_equal,
-        assert_array_almost_equal, assert_allclose, runstring, dec
+        assert_array_almost_equal, assert_allclose,
+        assert_array_less, runstring, dec
         )
 
 # Need to test an object that does not fully implement math interface
@@ -881,6 +882,103 @@ class TestMethods(TestCase):
         k = [0, 1, 2, 3, 5]
         assert_equal(a.searchsorted(k, side='l', sorter=s), [0, 20, 40, 60, 80])
         assert_equal(a.searchsorted(k, side='r', sorter=s), [20, 40, 60, 80, 100])
+
+
+    def test_partition(self):
+        #d = np.array([])
+        #assert_array_equal(np.partition(d, 0), d)
+        d = np.ones((1))
+        assert_array_equal(np.partition(d, 0)[0], d)
+        d = np.array([1, 2])
+        assert_array_equal(np.partition(d, 0)[0], 1)
+        assert_array_equal(np.partition(d, 1)[1], 2)
+        d = np.array([2, 1])
+        assert_array_equal(np.partition(d, 0)[0], 1)
+        assert_array_equal(np.partition(d, 1)[1], 2)
+        for r in ([3, 2, 1], [1, 2, 3], [2, 1, 3], [2, 3, 1]):
+            d = np.array(r)
+            assert_array_equal(np.partition(d, 0)[0], 1)
+            assert_array_equal(np.partition(d, 1)[1], 2)
+            assert_array_equal(np.partition(d, 2)[2], 3)
+
+        d = np.ones((50))
+        assert_array_equal(np.partition(d, 0), d)
+
+        # sorted
+        d = np.arange((49))
+        self.assertEqual(np.partition(d, 5)[5], 5)
+        self.assertEqual(np.partition(d, 5)[5], 5)
+
+        # rsorted
+        d = np.arange((47))[::-1]
+        self.assertEqual(np.partition(d, 16)[16], 16)
+        self.assertEqual(np.partition(d, 16)[16], 16)
+
+        d = np.array([2])
+        d.partition(0)
+        assert_raises(ValueError, d.partition, 1)
+        assert_raises(ValueError, d.partition, 2, axis=1)
+        assert_raises(ValueError, np.partition, d, 2)
+        assert_raises(ValueError, np.partition, d, 2, axis=1)
+        d = np.arange(10).reshape((2, 5))
+        d.partition(1, axis=0)
+        d.partition(4, axis=1)
+        np.partition(d, 1, axis=0)
+        np.partition(d, 4, axis=1)
+        np.partition(d, 1, axis=None)
+        np.partition(d, 9, axis=None)
+        assert_raises(ValueError, d.partition, 2, axis=0)
+        assert_raises(ValueError, d.partition, 11, axis=1)
+        assert_raises(TypeError, d.partition, 2, axis=None)
+        assert_raises(ValueError, np.partition, d, 9, axis=1)
+        assert_raises(ValueError, np.partition, d, 11, axis=None)
+
+        for dt in [np.int32, np.float32, np.complex64]:
+            for s in (9, 16):
+                d = np.arange(s, dtype=dt)
+                np.random.shuffle(d)
+                d1 = np.tile(np.arange(s, dtype=dt), (4, 1))
+                map(np.random.shuffle, d1)
+                d0 = np.transpose(d1)
+                for i in range(d.size):
+                    p = np.partition(d, i)
+                    self.assertEqual(p[i], i)
+                    # all before are smaller
+                    assert_array_less(p[:i], p[i])
+                    # all after are larger
+                    assert_array_less(p[i], p[i + 1:])
+
+                    p = np.partition(d1, i, axis=1)
+                    assert_array_equal(p[:,i], np.array([i] * d1.shape[0],
+                                                        dtype=dt))
+                    # array_less does not seem to work right
+                    self.assertTrue((p[:, :i].T <= p[:, i]).all(),
+                                    msg="%d: %r <= %r" % (i, p[:, i], p[:, :i].T))
+                    self.assertTrue((p[:, i + 1:].T > p[:, i]).all(),
+                                    msg="%d: %r < %r" % (i, p[:, i],
+                                                         p[:, i + 1:].T))
+
+                    p = np.partition(d0, i, axis=0)
+                    assert_array_equal(p[i, :], np.array([i] * d1.shape[0],
+                                                         dtype=dt))
+                    # array_less does not seem to work right
+                    self.assertTrue((p[:i, :] <= p[i, :]).all(),
+                                    msg="%d: %r <= %r" % (i, p[i, :], p[:i, :]))
+                    self.assertTrue((p[i + 1:, :] > p[i, :]).all(),
+                                    msg="%d: %r < %r" % (i, p[i, :],
+                                                         p[:, i + 1:]))
+
+                    # check inplace
+                    dc = d.copy()
+                    dc.partition(i)
+                    assert_equal(dc, np.partition(d, i))
+                    dc = d0.copy()
+                    dc.partition(i, axis=0)
+                    assert_equal(dc, np.partition(d0, i, axis=0))
+                    dc = d1.copy()
+                    dc.partition(i, axis=1)
+                    assert_equal(dc, np.partition(d1, i, axis=1))
+
 
     def test_flatten(self):
         x0 = np.array([[1,2,3],[4,5,6]], np.int32)

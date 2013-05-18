@@ -175,4 +175,5 @@ int npy_quicksort(void *base, size_t num, size_t size, npy_comparator cmp);
 int npy_heapsort(void *base, size_t num, size_t size, npy_comparator cmp);
 int npy_mergesort(void *base, size_t num, size_t size, npy_comparator cmp);
 
+int npy_quickselect(void *base, size_t num, size_t size, npy_comparator cmp);
 #endif

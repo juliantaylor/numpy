@@ -13,6 +13,7 @@
 
 #include "npy_config.h"
 #include "npy_sort.h"
+#include "npy_partition.h"
 #include "common.h"
 #include "ctors.h"
 #include "usertypes.h"
@@ -3641,6 +3642,7 @@ static PyArray_ArrFuncs _Py@NAME@_ArrFuncs = {
         (PyArray_ArgSortFunc *)aheapsort_@suff@,
         (PyArray_ArgSortFunc *)amergesort_@suff@
     },
+    {(PyArray_PartitionFunc *)quickselect_@suff@},
 #else
     {
         NULL, NULL, NULL
@@ -3648,6 +3650,7 @@ static PyArray_ArrFuncs _Py@NAME@_ArrFuncs = {
     {
         NULL, NULL, NULL
     },
+    {NULL},
 #endif
     NULL,
     (PyArray_ScalarKindFunc*)NULL,
@@ -3781,6 +3784,7 @@ static PyArray_ArrFuncs _Py@NAME@_ArrFuncs = {
         (PyArray_ArgSortFunc *)aheapsort_@suff@,
         (PyArray_ArgSortFunc *)amergesort_@suff@
     },
+    {(PyArray_PartitionFunc *)quickselect_@suff@,},
 #else
     {
         NULL, NULL, NULL
@@ -3788,6 +3792,7 @@ static PyArray_ArrFuncs _Py@NAME@_ArrFuncs = {
     {
         NULL, NULL, NULL
     },
+    {NULL},
 #endif
     NULL,
     (PyArray_ScalarKindFunc*)NULL,
