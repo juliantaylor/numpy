@@ -67,17 +67,17 @@
 
 #define IS_BLOCKABLE_SCALAR1(esize, vsize) \
     (steps[0] == 0 && steps[1] == steps[2] && steps[2] == (esize) && \
-    (abs(args[2] - args[1]) >= (vsize)) || abs(args[2] - args[1]) == 0)&& \
-    abs(args[2] - args[0]) >= (esize)
+    ((abs(args[2] - args[1]) >= (vsize)) || (abs(args[2] - args[1]) == 0)) && \
+    abs(args[2] - args[0]) >= (esize))
 
 #define IS_BLOCKABLE_SCALAR2(esize, vsize) \
     (steps[1] == 0 && steps[0] == steps[2] && steps[2] == (esize) && \
-    (abs(args[2] - args[0]) >= (vsize) || abs(args[2] - args[0]) == 0) && \
+    ((abs(args[2] - args[0]) >= (vsize)) || (abs(args[2] - args[0]) == 0)) && \
      abs(args[2] - args[1]) >= (esize))
 
 #define IS_BLOCKABLE_UNARY(esize, vsize) \
     (steps[0] == (esize) && steps[0] == steps[1] && \
-     (abs(args[1] - args[0]) >= (vsize) || (abs(args[1] - args[0]) == 0)))
+    ((abs(args[1] - args[0]) >= (vsize)) || ((abs(args[1] - args[0]) == 0))))
 
 #define IS_BLOCKABLE_REDUCE(esize, vsize) \
     (steps[1] == (esize) && abs(args[1] - args[0]) >= (vsize))
