@@ -403,7 +403,7 @@ PyArray_PrepareThreeRawArrayIter(int ndim, npy_intp *shape,
  * in order to reach 'alignment'.
  * see npy_blocked_end for an example
  */
-static inline npy_intp
+static NPY_INLINE npy_intp
 npy_blocked_peel(const void * addr, const npy_intp esize,
                  const npy_intp alignment, const npy_intp nvals)
 {
@@ -433,7 +433,7 @@ npy_blocked_peel(const void * addr, const npy_intp esize,
  * for(; i < n; i++)
  *   <scalar-op>
  */
-static inline npy_intp
+static NPY_INLINE npy_intp
 npy_blocked_end(const npy_intp peel, const npy_intp esize,
                 const npy_intp vsz, const npy_intp nvals)
 {
