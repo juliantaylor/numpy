@@ -53,6 +53,8 @@
  *****************************************************************************
  */
 
+#define IS_ALIGNED(p, alignment) ((npy_intp)(p) & (alignment - 1))
+
 #define IS_BINARY_REDUCE ((args[0] == args[2])\
         && (steps[0] == steps[2])\
         && (steps[0] == 0))
@@ -78,6 +80,7 @@
 
 #define IS_BLOCKABLE_UNARY(esize, vsize) \
     (steps[0] == (esize) && steps[0] == steps[1] && \
+    ((npy_intp)args[0] % esize) == 0 && ((npy_intp)args[1] % esize) == 0 && \
     ((abs(args[1] - args[0]) >= (vsize)) || ((abs(args[1] - args[0]) == 0))))
 
 #define IS_BLOCKABLE_REDUCE(esize, vsize) \
@@ -104,11 +107,14 @@
     npy_intp i;\
     for(i = 0; i < n; i++, ip1 += is1, op1 += os1, op2 += os2)
 
-#define UNARY_LOOP_BLOCKED(type, vsize)\
+#define UNARY_LOOP_PEEL(type, vsize)\
     type *ip1 = (type *)args[0], *op1 = (type *)args[1];\
     npy_intp n = dimensions[0];\
-    npy_intp i;\
-    for(i = 0; i < npy_blocked_end(0, sizeof(type), vsize, n);\
+    npy_intp i, peel = npy_blocked_peel(op1, sizeof(type), vsize, n);\
+    for(i = 0; i < peel; i++)
+
+#define UNARY_LOOP_BLOCKED(type, vsize)\
+    for(; i < npy_blocked_end(peel, sizeof(type), vsize, n);\
         i += (vsize / sizeof(type)))
 
 #define UNARY_LOOP_BLOCKED_END\
@@ -219,9 +225,26 @@ PyUFunc_f_f(char **args, npy_intp *dimensions, npy_intp *steps, void *func)
     floatUnaryFunc *f = (floatUnaryFunc *)func;
 #ifdef HAVE_EMMINTRIN_H
     if (f == npy_sqrtf && IS_BLOCKABLE_UNARY(sizeof(float), 16)) {
-        UNARY_LOOP_BLOCKED(float, 16) {
-            __m128 d = _mm_loadu_ps(&ip1[i]);
-            _mm_storeu_ps(&op1[i], _mm_sqrt_ps(d));
+        UNARY_LOOP_PEEL(float, 16)
+            op1[i] = npy_sqrtf(ip1[i]);
+        /* in and out can have different alignment */
+        if (IS_ALIGNED(&op1[i], 16) && IS_ALIGNED(&ip1[i], 16)) {
+            UNARY_LOOP_BLOCKED(float, 16) {
+                __m128 d = _mm_load_ps(&ip1[i]);
+                _mm_store_ps(&op1[i], _mm_sqrt_ps(d));
+            }
+        }
+        else if (IS_ALIGNED(&op1[i], 16) && !IS_ALIGNED(&ip1[i], 16)) {
+            UNARY_LOOP_BLOCKED(float, 16) {
+                __m128 d = _mm_loadu_ps(&ip1[i]);
+                _mm_store_ps(&op1[i], _mm_sqrt_ps(d));
+            }
+        }
+        else {
+            UNARY_LOOP_BLOCKED(float, 16) {
+                __m128 d = _mm_loadu_ps(&ip1[i]);
+                _mm_storeu_ps(&op1[i], _mm_sqrt_ps(d));
+            }
         }
         UNARY_LOOP_BLOCKED_END
             op1[i] = npy_sqrtf(ip1[i]);
@@ -314,9 +337,26 @@ PyUFunc_d_d(char **args, npy_intp *dimensions, npy_intp *steps, void *func)
     doubleUnaryFunc *f = (doubleUnaryFunc *)func;
 #ifdef HAVE_EMMINTRIN_H
     if (f == npy_sqrt && IS_BLOCKABLE_UNARY(sizeof(double), 16)) {
-        UNARY_LOOP_BLOCKED(double, 16) {
-            __m128d d = _mm_loadu_pd(&ip1[i]);
-            _mm_storeu_pd(&op1[i], _mm_sqrt_pd(d));
+        UNARY_LOOP_PEEL(double, 16)
+            op1[i] = npy_sqrt(ip1[i]);
+        /* in and out can have different alignment */
+        if (IS_ALIGNED(&op1[i], 16) && IS_ALIGNED(&ip1[i], 16)) {
+            UNARY_LOOP_BLOCKED(double, 16) {
+                __m128d d = _mm_load_pd(&ip1[i]);
+                _mm_store_pd(&op1[i], _mm_sqrt_pd(d));
+            }
+        }
+        else if (IS_ALIGNED(&op1[i], 16) && !IS_ALIGNED(&ip1[i], 16)) {
+            UNARY_LOOP_BLOCKED(double, 16) {
+                __m128d d = _mm_loadu_pd(&ip1[i]);
+                _mm_store_pd(&op1[i], _mm_sqrt_pd(d));
+            }
+        }
+        else {
+            UNARY_LOOP_BLOCKED(double, 16) {
+                __m128d d = _mm_loadu_pd(&ip1[i]);
+                _mm_storeu_pd(&op1[i], _mm_sqrt_pd(d));
+            }
         }
         UNARY_LOOP_BLOCKED_END
             op1[i] = npy_sqrt(ip1[i]);

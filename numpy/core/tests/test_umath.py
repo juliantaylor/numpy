@@ -101,11 +101,33 @@ class TestPower(TestCase):
         assert_almost_equal(x**(0.5), [1., ncu.sqrt(2), ncu.sqrt(3)])
 
         # test a couple simd blocking cases
-        for n in range(17):
-            x = np.arange(n, dtype=np.float64)
-            assert_almost_equal(x**(0.5), [ncu.sqrt(i) for i in range(n)])
-            x = np.arange(n, dtype=np.float32)
-            assert_almost_equal(x**(0.5), [ncu.sqrt(i) for i in range(n)])
+        for o in range(15):
+            for n in range(27):
+                # out unaligned
+                x = np.arange(n, dtype=np.float64)[o:]
+                assert_almost_equal(x**(0.5), [ncu.sqrt(i) for i in x])
+                x = np.arange(n, dtype=np.float32)[o:]
+                assert_almost_equal(x**(0.5), [ncu.sqrt(i) for i in x])
+
+                # in/out same alignment
+                x = np.arange(n, dtype=np.float64)[o:]
+                out = np.arange(n, dtype=np.float64)[o:]
+                np.sqrt(x, out=out)
+                assert_almost_equal(out, [ncu.sqrt(i) for i in x])
+                x = np.arange(n, dtype=np.float32)[o:]
+                out = np.arange(n, dtype=np.float32)[o:]
+                np.sqrt(x, out=out)
+                assert_almost_equal(out, [ncu.sqrt(i) for i in x])
+
+                # different alignment
+                x = np.arange(n, dtype=np.float64)[o:]
+                out = np.arange(n + 1, dtype=np.float64)[o + 1:]
+                np.sqrt(x, out=out)
+                assert_almost_equal(out, [ncu.sqrt(i) for i in x])
+                x = np.arange(n, dtype=np.float32)[o:]
+                out = np.arange(n + 1, dtype=np.float32)[o + 1:]
+                np.sqrt(x, out=out)
+                assert_almost_equal(out, [ncu.sqrt(i) for i in x])
 
     def test_power_complex(self):
         x = np.array([1+2j, 2+3j, 3+4j])
