@@ -21,6 +21,7 @@
 
 #include "ufunc_object.h"
 #include <string.h>
+#include <assert.h>
 
 #ifdef HAVE_EMMINTRIN_H
 #include <emmintrin.h>
@@ -1378,6 +1379,127 @@ TIMEDELTA_mm_d_divide(char **args, npy_intp *dimensions, npy_intp *steps, void *
  *****************************************************************************
  */
 
+static NPY_INLINE __m128 npy_broadcast_FLOAT(const float x)
+{
+    const float __v[4] = {x, x, x, x};
+    return _mm_loadu_ps(__v);
+}
+
+static NPY_INLINE __m128d npy_broadcast_DOUBLE(const double x)
+{
+    const double __v[2] = {x, x};
+    return _mm_loadu_pd(__v);
+}
+
+/**begin repeat
+* name
+* # fname = binary_u, binary_uscalar1, binary_uscalar2, binary_reduce#
+*/
+
+/**begin repeat1
+* Arithmetic
+* # kind = add, subtract, multiply, divide#
+*/
+/* avoid implicit declartion warnings */
+static void
+@fname@_LONGDOUBLE_@kind@(char **args, npy_intp *dimensions,
+                          npy_intp *steps)
+{
+    assert(1);
+}
+/**end repeat1**/
+/**end repeat**/
+
+
+/**begin repeat
+* Float types
+*  #type = npy_float, npy_double#
+*  #TYPE = FLOAT, DOUBLE#
+*  #c = ps, pd#
+*  #vload = _mm_load_ps, _mm_load_pd#
+*  #vstore = _mm_store_ps, _mm_store_pd#
+*  #vloadu = _mm_loadu_ps, _mm_loadu_pd#
+*  #vstoreu = _mm_storeu_ps, _mm_storeu_pd#
+*  #VSUF = ps, pd#
+*  #vtype = __m128, __m128d#
+*/
+
+/**begin repeat1
+* Arithmetic
+* # kind = add, subtract, multiply, divide#
+* # OP = +, -, *, /#
+* # VOP = _mm_add, _mm_sub, _mm_mul, _mm_div#
+*/
+static void
+binary_u_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                       npy_intp *steps)
+{
+    BINARY_LOOP_BLOCKED(@type@, 16) {
+        @vtype@ a = @vloadu@(&ip1[i]);
+        @vtype@ b = @vloadu@(&ip2[i]);
+        @vtype@ c = @VOP@_@VSUF@(a, b);
+        @vstoreu@(&op1[i], c);
+    }
+    BINARY_LOOP_BLOCKED_END
+        op1[i] = ip1[i] @OP@ ip2[i];
+}
+
+
+static void
+binary_uscalar1_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                              npy_intp *steps)
+{
+    const @vtype@ a = npy_broadcast_@TYPE@(*(@type@*)args[0]);
+    BINARY_LOOP_BLOCKED(@type@, 16) {
+        @vtype@ b = @vloadu@(&ip2[i]);
+        @vtype@ c = @VOP@_@VSUF@(a, b);
+        @vstoreu@(&op1[i], c);
+    }
+    BINARY_LOOP_BLOCKED_END
+        op1[i] = ip1[0] @OP@ ip2[i];
+}
+
+static void
+binary_uscalar2_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                              npy_intp *steps)
+{
+    const @vtype@ b = npy_broadcast_@TYPE@(*(@type@*)args[1]);
+    BINARY_LOOP_BLOCKED(@type@, 16) {
+        @vtype@ a = @vloadu@(&ip1[i]);
+        @vtype@ c = @VOP@_@VSUF@(a, b);
+        @vstoreu@(&op1[i], c);
+    }
+    BINARY_LOOP_BLOCKED_END
+        op1[i] = ip1[i] @OP@ ip2[0];
+}
+
+static void
+binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                            npy_intp *steps)
+{
+    @vtype@  c;
+    BINARY_REDUCE_LOOP_PEEL(@type@, 16) {
+        *op1 @OP@= ip2[i];
+    }
+    if (i + 32 / sizeof(@type@) <= n) {
+        int j;
+        @type@ v[16 / sizeof(@type@)];
+        c = @vload@(&ip2[i]);
+        i += 16 / sizeof(@type@);
+        BINARY_REDUCE_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vload@(&ip2[i]);
+            c  = @VOP@_@VSUF@(c, a);
+        }
+        /* could be optimized */
+        @vstoreu@(v, c);
+        for (j = 0; j < sizeof(v)/sizeof(v[0]); j++)
+            *op1 @OP@= v[j];
+    }
+    BINARY_REDUCE_LOOP_BLOCKED_END
+        *op1 @OP@= ip2[i];
+}
+/**end repeat1**/
+/**end repeat**/
 
 /**begin repeat
  * Float types
@@ -1401,37 +1523,7 @@ TIMEDELTA_mm_d_divide(char **args, npy_intp *dimensions, npy_intp *steps, void *
         if (strcmp("@TYPE@", "FLOAT") == 0 &&
             (strcmp("@OP@", "+") == 0 || strcmp("@OP@", "*") == 0) &&
             IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
-            npy_v4fu c;
-            BINARY_REDUCE_LOOP_PEEL(@type@, 16) {
-                *op1 @OP@= ip2[i];
-            }
-            if (i + 32 / sizeof(@type@) <= n) {
-                c.vec = *(npy_v4f*)&ip2[i];
-                i += 16 / sizeof(@type@);
-                BINARY_REDUCE_LOOP_BLOCKED(@type@, 16) {
-                    c.vec @OP@= *(npy_v4f*)&ip2[i];
-                }
-                *op1 @OP@= c.v[0] @OP@ c.v[1] @OP@ c.v[2] @OP@ c.v[3];
-            }
-            BINARY_REDUCE_LOOP_BLOCKED_END
-                *op1 @OP@= ip2[i];
-        }
-        else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
-                 (strcmp("@OP@", "+") == 0 || strcmp("@OP@", "*") == 0) &&
-                 IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
-            npy_v2du c;
-            BINARY_REDUCE_LOOP_PEEL(@type@, 16)
-                *op1 @OP@= ip2[i];
-            if (i + 32 / sizeof(@type@) <= n) {
-                c.vec = *(npy_v2d*)&ip2[i];
-                i += 16 / sizeof(@type@);
-                BINARY_REDUCE_LOOP_BLOCKED(@type@, 16) {
-                    c.vec @OP@= *(npy_v2d*)&ip2[i];
-                }
-                *op1 @OP@= c.v[0] @OP@ c.v[1];
-            }
-            BINARY_REDUCE_LOOP_BLOCKED_END
-                *op1 @OP@= ip2[i];
+            binary_reduce_@TYPE@_@kind@(args, dimensions, steps);
         }
         else
 #endif
@@ -1447,78 +1539,31 @@ TIMEDELTA_mm_d_divide(char **args, npy_intp *dimensions, npy_intp *steps, void *
         /* all constant -> compile time evaluation */
         if (strcmp("@TYPE@", "FLOAT") == 0 &&
             IS_BLOCKABLE(sizeof(float), 16)) {
-            BINARY_LOOP_BLOCKED(float, 16) {
-                npy_v4f a = __builtin_ia32_loadups(&ip1[i]);
-                npy_v4f b = __builtin_ia32_loadups(&ip2[i]);
-                npy_v4f c = a @OP@ b;
-                __builtin_ia32_storeups(&op1[i], c);
-            }
-            BINARY_LOOP_BLOCKED_END
-                op1[i] = ip1[i] @OP@ ip2[i];
+            binary_u_@TYPE@_@kind@(args, dimensions, steps);
         }
         /* argument one scalar */
         else if (strcmp("@TYPE@", "FLOAT") == 0 &&
                  IS_BLOCKABLE_SCALAR1(sizeof(float), 16)) {
-            const @type@ v = *(@type@*)args[0];
-            const npy_v4f a = (npy_v4f){ v, v, v, v };
-            BINARY_LOOP_BLOCKED(float, 16) {
-                npy_v4f b = __builtin_ia32_loadups(&ip2[i]);
-                npy_v4f c = a @OP@ b;
-                __builtin_ia32_storeups(&op1[i], c);
-            }
-            BINARY_LOOP_BLOCKED_END
-                op1[i] = ip1[0] @OP@ ip2[i];
+            binary_uscalar1_@TYPE@_@kind@(args, dimensions, steps);
         }
         /* argument two scalar */
         else if (strcmp("@TYPE@", "FLOAT") == 0 &&
                  IS_BLOCKABLE_SCALAR2(sizeof(float), 16)) {
-            const @type@ v = *(@type@*)args[1];
-            const npy_v4f b = (npy_v4f){ v, v, v, v };
-            BINARY_LOOP_BLOCKED(float, 16) {
-                npy_v4f a = __builtin_ia32_loadups(&ip1[i]);
-                npy_v4f c = a @OP@ b;
-                __builtin_ia32_storeups(&op1[i], c);
-            }
-            BINARY_LOOP_BLOCKED_END
-                op1[i] = ip1[i] @OP@ ip2[0];
+            binary_uscalar2_@TYPE@_@kind@(args, dimensions, steps);
         }
         else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
                  IS_BLOCKABLE(sizeof(double), 16)) {
-            BINARY_LOOP_BLOCKED(double, 16) {
-                npy_v2d a = __builtin_ia32_loadupd(&ip1[i]);
-                npy_v2d b = __builtin_ia32_loadupd(&ip2[i]);
-                npy_v2d c = a @OP@ b;
-                __builtin_ia32_storeupd(&op1[i], c);
-            }
-            BINARY_LOOP_BLOCKED_END
-                op1[i] = ip1[i] @OP@ ip2[i];
+            binary_u_@TYPE@_@kind@(args, dimensions, steps);
         }
         /* argument one scalar */
         else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
                  IS_BLOCKABLE_SCALAR1(sizeof(double), 16)) {
-            const @type@ v = *(@type@*)args[0];
-            const npy_v2d a = (npy_v2d){ v, v };
-            BINARY_LOOP_BLOCKED(double, 16) {
-                npy_v2d b = __builtin_ia32_loadupd(&ip2[i]);
-                npy_v2d c = a @OP@ b;
-                __builtin_ia32_storeupd(&op1[i], c);
-            }
-            BINARY_LOOP_BLOCKED_END
-                op1[i] = ip1[0] @OP@ ip2[i];
+            binary_uscalar1_@TYPE@_@kind@(args, dimensions, steps);
         }
         /* argument two scalar */
         else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
                  IS_BLOCKABLE_SCALAR2(sizeof(double), 16)) {
-            const @type@ v = *(@type@*)args[1];
-            const npy_v2d b = (npy_v2d){ v, v };
-            BINARY_LOOP_BLOCKED(double, 16) {
-                const npy_v2d b = (npy_v2d){ ip2[0], ip2[0] };
-                npy_v2d a = __builtin_ia32_loadupd(&ip1[i]);
-                npy_v2d c = a @OP@ b;
-                __builtin_ia32_storeupd(&op1[i], c);
-            }
-            BINARY_LOOP_BLOCKED_END
-                op1[i] = ip1[i] @OP@ ip2[0];
+            binary_uscalar2_@TYPE@_@kind@(args, dimensions, steps);
         }
         else
 #endif
@@ -1620,32 +1665,41 @@ NPY_NO_EXPORT void
 {
     /*  */
     if (IS_BINARY_REDUCE) {
+        if (0)
+            args = args;
 #if HAVE_EMMINTRIN_H
-        if (strcmp("@TYPE@", "FLOAT") == 0 &&
+/**begin repeat2
+ * #ctype = float, double#
+ * #VTYPE = FLOAT, DOUBLE#
+ * #vtype =  __m128, __m128d#
+ * #vsuf = ps, pd#
+ * :exclude: TYPE=LONGDOUBLE
+ **/
+        else if (strcmp("@TYPE@", "@VTYPE@") == 0 &&
             IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
             BINARY_REDUCE_LOOP_PEEL(@type@, 16)
                 *op1 = (*op1 @OP@ ip2[i] || npy_isnan(*op1)) ? *op1 : ip2[i];
             if (i + 32 / sizeof(@type@) <= n) {
-                __m128 c = _mm_load_ps((@type@*)&ip2[i]);
+                @vtype@ c = _mm_load_@vsuf@((@ctype@*)&ip2[i]);
+                @vtype@ cnan = _mm_or_@vsuf@(_mm_cmpneq_@vsuf@(c, c), cnan);
                 i += 16 / sizeof(@type@);
-                __m128 cnan = _mm_or_ps(_mm_cmpneq_ps(c, c), cnan);
                 BINARY_REDUCE_LOOP_BLOCKED(@type@, 16) {
-                    __m128 v = _mm_load_ps((float*)&ip2[i]);
+                    @vtype@ v = _mm_load_@vsuf@((@ctype@*)&ip2[i]);
                     if (strcmp("@OP@", ">=") == 0)
-                        c = _mm_max_ps(c, v);
+                        c = _mm_max_@vsuf@(c, v);
                     if (strcmp("@OP@", "<=") == 0)
-                        c = _mm_min_ps(c, v);
+                        c = _mm_min_@vsuf@(c, v);
 
                     /* check for nan, breaking the loop makes non nan case slow */
-                    cnan = _mm_or_ps(_mm_cmpneq_ps(v, v), cnan);
+                    cnan = _mm_or_@vsuf@(_mm_cmpneq_@vsuf@(v, v), cnan);
                 }
-                if (_mm_movemask_ps(cnan))
+                if (_mm_movemask_@vsuf@(cnan))
                     *op1 = NPY_NANF;
                 else {
                     /* could be done in simd registers for minor speed gain*/
                     @type@ m[16 / sizeof(@type@)];
                     int g;
-                    _mm_storeu_ps(m, c);
+                    _mm_store_@vsuf@((@ctype@ *)m, c);
                     for (g = 0; g < sizeof(m) / sizeof(m[0]); g++) {
                         /* handle nan in pre loop load */
                         *op1 = (*op1 @OP@ ip2[g] || npy_isnan(*op1)) ? *op1 : ip2[g];
@@ -1656,41 +1710,7 @@ NPY_NO_EXPORT void
             BINARY_REDUCE_LOOP_BLOCKED_END
                 *op1  = (*op1 @OP@ ip2[i] || npy_isnan(*op1)) ? *op1 : ip2[i];
         }
-        else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
-            IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
-            BINARY_REDUCE_LOOP_PEEL(@type@, 16)
-                *op1 = (*op1 @OP@ ip2[i] || npy_isnan(*op1)) ? *op1 : ip2[i];
-            if (i + 32 / sizeof(@type@) <= n) {
-                __m128d c = _mm_load_pd((@type@*)&ip2[i]);
-                i += 16 / sizeof(@type@);
-                __m128d cnan = _mm_or_pd(_mm_cmpneq_pd(c, c), cnan);
-                BINARY_REDUCE_LOOP_BLOCKED(@type@, 16) {
-                    __m128d v = _mm_load_pd((double*)&ip2[i]);
-                    if (strcmp("@OP@", ">=") == 0)
-                        c = _mm_max_pd(c, v);
-                    if (strcmp("@OP@", "<=") == 0)
-                        c = _mm_min_pd(c, v);
-
-                    /* check for nan, breaking the loop makes non nan case slow */
-                    cnan = _mm_or_pd(_mm_cmpneq_pd(v, v), cnan);
-                }
-                if (_mm_movemask_pd(cnan))
-                    *op1 = NPY_NAN;
-                else {
-                    /* could be done in simd registers for minor speed gain*/
-                    @type@ m[16 / sizeof(@type@)];
-                    int g;
-                    _mm_storeu_pd(m, c);
-                    for (g = 0; g < sizeof(m) / sizeof(m[0]); g++) {
-                        /* handle nan in pre loop load */
-                        *op1 = (*op1 @OP@ ip2[g] || npy_isnan(*op1)) ? *op1 : ip2[g];
-                        *op1 = (*op1 @OP@ m[g] || npy_isnan(*op1)) ? *op1 : m[g];
-                    }
-                }
-            }
-            BINARY_REDUCE_LOOP_BLOCKED_END
-                *op1  = (*op1 @OP@ ip2[i] || npy_isnan(*op1)) ? *op1 : ip2[i];
-        }
+/**end repeat2**/
         else
 #endif
         {
