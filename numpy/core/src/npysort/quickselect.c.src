@@ -90,9 +90,49 @@ quickselect_@suff@(@type@ *start, npy_intp num, npy_intp kth,
 
 
 int
-aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, void *NOT_USED)
+aquickselect_@suff@(@type@ *start, npy_intp* tosort, npy_intp num, npy_intp kth, void *NOT_USED)
 {
-    return aquicksort_@suff@(v, tosort, num, NULL);
+    npy_intp low  = 0;
+    npy_intp high = num - 1;
+
+    for (;low + 1 < high;) {
+        const npy_intp mid = low + (high - low) / 2;
+        npy_intp       ll = low + 1;
+        npy_intp       hh = high;
+
+        /* swap 3-median into low and low into mid*/
+        if (@TYPE@_LT(start[tosort[high]], start[tosort[mid]]))
+            INTP_SWAP(tosort[high], tosort[mid]);
+        if (@TYPE@_LT(start[tosort[high]], start[tosort[low]]))
+            INTP_SWAP(tosort[high], tosort[low]);
+        if (@TYPE@_LT(start[tosort[low]], start[tosort[mid]]))
+            INTP_SWAP(tosort[low], tosort[mid]);
+        INTP_SWAP(tosort[mid], tosort[low + 1]);
+
+        const @type@ v = start[tosort[low]];
+        for (;;) {
+            do ll++; while (@TYPE@_LT(start[tosort[ll]], v));
+            do hh--; while (@TYPE@_LT(v, start[tosort[hh]]));
+
+            if (hh < ll)
+                break;
+
+            INTP_SWAP(tosort[ll], tosort[hh])
+        }
+
+        INTP_SWAP(tosort[low], tosort[hh])
+
+        if (hh >= kth)
+            high = hh - 1; 
+        if (hh <= kth)
+            low = ll;
+    }
+
+    if (high == low + 1)
+        if (@TYPE@_LT(start[tosort[high]], start[tosort[low]]))
+            INTP_SWAP(tosort[high], tosort[low]);
+
+    return 0;
 }
 
 /**end repeat**/

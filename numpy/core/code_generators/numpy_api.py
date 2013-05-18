@@ -337,6 +337,7 @@ multiarray_funcs_api = {
     'PyArray_MapIterNext':                  295,
     # End 1.7 API
     'PyArray_Partition':                    296,
+    'PyArray_ArgPartition':                 297,
 }
 
 ufunc_types_api = {

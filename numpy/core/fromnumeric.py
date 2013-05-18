@@ -16,7 +16,8 @@ _dt_ = nt.sctype2char
 
 # functions that are now methods
 __all__ = ['take', 'reshape', 'choose', 'repeat', 'put',
-           'swapaxes', 'transpose', 'sort', 'argsort', 'partition', 'argmax', 'argmin',
+           'swapaxes', 'transpose', 'sort', 'argsort', 'partition', 'argpartition',
+           'argmax', 'argmin',
            'searchsorted', 'alen',
            'resize', 'diagonal', 'trace', 'ravel', 'nonzero', 'shape',
            'compress', 'clip', 'sum', 'product', 'prod', 'sometrue', 'alltrue',
@@ -543,6 +544,8 @@ def partition(a, kth, axis=-1):
     a.partition(kth, axis=axis)
     return a
 
+def argpartition(a, kth, axis=-1):
+    return a.argpartition(kth, axis)
 
 def sort(a, axis=-1, kind='quicksort', order=None):
     """

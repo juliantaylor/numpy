@@ -1283,6 +1283,59 @@ array_argsort(PyArrayObject *self, PyObject *args, PyObject *kwds)
     return PyArray_Return((PyArrayObject *)res);
 }
 
+
+static PyObject *
+array_argpartition(PyArrayObject *self, PyObject *args, PyObject *kwds)
+{
+    int axis = -1;
+    Py_ssize_t kth;
+    NPY_SORTKIND sortkind = NPY_QUICKSORT;
+    PyObject *order = NULL, *res;
+    PyArray_Descr *newd, *saved=NULL;
+    static char *kwlist[] = {"kth", "axis", "kind", "order", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|O&O&O", kwlist,
+                                     &kth,
+                                     PyArray_AxisConverter, &axis,
+                                     PyArray_SortkindConverter, &sortkind,
+                                     &order)) {
+        return NULL;
+    }
+    if (order == Py_None) {
+        order = NULL;
+    }
+    if (order != NULL) {
+        PyObject *new_name;
+        PyObject *_numpy_internal;
+        saved = PyArray_DESCR(self);
+        if (!PyDataType_HASFIELDS(saved)) {
+            PyErr_SetString(PyExc_ValueError, "Cannot specify "
+                            "order when the array has no fields.");
+            return NULL;
+        }
+        _numpy_internal = PyImport_ImportModule("numpy.core._internal");
+        if (_numpy_internal == NULL) {
+            return NULL;
+        }
+        new_name = PyObject_CallMethod(_numpy_internal, "_newnames",
+                                       "OO", saved, order);
+        Py_DECREF(_numpy_internal);
+        if (new_name == NULL) {
+            return NULL;
+        }
+        newd = PyArray_DescrNew(saved);
+        newd->names = new_name;
+        ((PyArrayObject_fields *)self)->descr = newd;
+    }
+
+    res = PyArray_ArgPartition(self, kth, axis, sortkind);
+    if (order != NULL) {
+        Py_XDECREF(PyArray_DESCR(self));
+        ((PyArrayObject_fields *)self)->descr = saved;
+    }
+    return PyArray_Return((PyArrayObject *)res);
+}
+
 static PyObject *
 array_searchsorted(PyArrayObject *self, PyObject *args, PyObject *kwds)
 {
@@ -2248,6 +2301,9 @@ NPY_NO_EXPORT PyMethodDef array_methods[] = {
         METH_VARARGS | METH_KEYWORDS, NULL},
     {"any",
         (PyCFunction)array_any,
+        METH_VARARGS | METH_KEYWORDS, NULL},
+    {"argpartition",
+        (PyCFunction)array_argpartition,
         METH_VARARGS | METH_KEYWORDS, NULL},
     {"argmax",
         (PyCFunction)array_argmax,
