@@ -1431,25 +1431,6 @@ static NPY_INLINE __m128d npy_broadcast_DOUBLE(const double x)
     return _mm_loadu_pd(__v);
 }
 
-/**begin repeat
-* name
-* # fname = binary_u, binary_uscalar1, binary_uscalar2, binary_reduce#
-*/
-
-/**begin repeat1
-* Arithmetic
-* # kind = add, subtract, multiply, divide#
-*/
-/* avoid implicit declartion warnings */
-static void
-@fname@_LONGDOUBLE_@kind@(char **args, npy_intp *dimensions,
-                          npy_intp *steps)
-{
-    assert(1);
-}
-/**end repeat1**/
-/**end repeat**/
-
 
 /**begin repeat
 * Float types
@@ -1463,6 +1444,8 @@ static void
 *  #VSUF = ps, pd#
 *  #vtype = __m128, __m128d#
 */
+
+#define NPY_HAVE_SIMD_@TYPE@
 
 /**begin repeat1
 * Arithmetic
@@ -1559,7 +1542,7 @@ binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
 @TYPE@_@kind@(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
 {
     if(IS_BINARY_REDUCE) {
-#ifdef NPY_HAVE_BASE_SSE_MATH
+#if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@
         if (strcmp("@TYPE@", "FLOAT") == 0 &&
             (strcmp("@OP@", "+") == 0 || strcmp("@OP@", "*") == 0) &&
             IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
@@ -1575,7 +1558,7 @@ binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
         }
     }
     else {
-#ifdef NPY_HAVE_BASE_SSE_MATH
+#if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@
         /* all constant -> compile time evaluation */
         if (strcmp("@TYPE@", "FLOAT") == 0 &&
             IS_BLOCKABLE(sizeof(float), 16)) {
