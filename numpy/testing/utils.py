@@ -1536,13 +1536,13 @@ def gen_alignment_data(dtype=float32, type='binary', max_size=32):
     dtype : dtype
         data type to produce
     type : string
-        'unary': create data for unary operations, creates one input 
+        'unary': create data for unary operations, creates one input
                  and output array
-        'binary': create data for unary operations, creates two input 
+        'binary': create data for unary operations, creates two input
                  and output array
     max_size : integer
         maximum size of data to produce
-    
+
     Returns
     -------
     if type is 'unary' yields one output, one input array and a message
@@ -1552,7 +1552,7 @@ def gen_alignment_data(dtype=float32, type='binary', max_size=32):
 
     """
     ufmt = 'unary offset=(%d, %d), size=%d, dtype=%r, %s'
-    bfmt = 'binary offset=(%d, %d, %d), size=%d, dtype=%r, %s' 
+    bfmt = 'binary offset=(%d, %d, %d), size=%d, dtype=%r, %s'
     for o in range(4):
         for s in range(o + 2, max(o + 3, max_size)):
             if type == 'unary':

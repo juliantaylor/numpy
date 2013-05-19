@@ -27,25 +27,6 @@
 #include <emmintrin.h>
 #endif
 
-#ifndef NPY_HAVE_BASE_SSE_MATH
-#if defined HAVE___BUILTIN_IA32_ADDPS && defined HAVE___BUILTIN_IA32_ADDPD &&\
-    defined HAVE___BUILTIN_IA32_MULPS && defined HAVE___BUILTIN_IA32_MULPD &&\
-    defined HAVE___BUILTIN_IA32_DIVPS && defined HAVE___BUILTIN_IA32_DIVPD
-
-    typedef float npy_v4f __attribute__ ((vector_size (16)));
-    typedef double npy_v2d __attribute__ ((vector_size (16)));
-    typedef union {
-        npy_v4f vec;
-        float v[4];
-    } npy_v4fu;
-    typedef union {
-        npy_v2d vec;
-        double v[2];
-    } npy_v2du;
-#define NPY_HAVE_BASE_SSE_MATH
-#endif
-#endif
-
 
 /*
  *****************************************************************************
@@ -80,8 +61,8 @@
 
 #define IS_BLOCKABLE_UNARY(esize, vsize) \
     (steps[0] == (esize) && steps[0] == steps[1] && \
-    ((npy_intp)args[0] % esize) == 0 && ((npy_intp)args[1] % esize) == 0 && \
-    ((abs(args[1] - args[0]) >= (vsize)) || ((abs(args[1] - args[0]) == 0))))
+     (IS_ALIGNED(args[0], esize) && IS_ALIGNED(args[1], esize)) && \
+     ((abs(args[1] - args[0]) >= (vsize)) || ((abs(args[1] - args[0]) == 0))))
 
 #define IS_BLOCKABLE_REDUCE(esize, vsize) \
     (steps[1] == (esize) && abs(args[1] - args[0]) >= (vsize))
