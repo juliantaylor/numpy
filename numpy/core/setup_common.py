@@ -98,7 +98,10 @@ OPTIONAL_STDFUNCS = ["expm1", "log1p", "acosh", "asinh", "atanh",
         "copysign", "nextafter"]
 
 
-OPTIONAL_HEADERS = ["emmintrin.h" # SSE2, amd64 only
+OPTIONAL_HEADERS = [
+# sse headers only enabled automatically on amd64/x32 builds
+                "xmmintrin.h", # SSE
+                "emmintrin.h", # SSE2
 ]
 
 # trick to get a vector type without a typedef
