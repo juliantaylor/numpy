@@ -20,7 +20,7 @@ from numpy import ndarray
 from numpy.ma.testutils import *
 from numpy.ma.core import *
 from numpy.compat import asbytes, asbytes_nested
-from numpy.testing.utils import WarningManager
+from numpy.testing.utils import WarningManager, gen_alignment_data
 
 pi = np.pi
 
@@ -945,20 +945,25 @@ class TestMaskedArrayArithmetic(TestCase):
         self.assertTrue(x.max() is masked)
         self.assertTrue(x.ptp() is masked)
 
+
     def test_minmax_blocked(self):
         "simd tests on max/min"
         for dt in [np.float32, np.float64]:
-            for n in range(1, 17):
-                for i in range(n):
-                    d = np.arange(n, dtype=dt);
-                    d[i] = np.nan
-                    self.assertTrue(np.isnan(d.max()), msg=repr(d))
-                    self.assertTrue(np.isnan(d.min()), msg=repr(d))
+            for out, inp, msg in gen_alignment_data(dtype=dt, type='unary',
+                                                    max_size=17):
+                for i in range(inp.size):
+                    inp[:] = np.arange(inp.size, dtype=dt)
+                    inp[i] = np.nan
+                    self.assertTrue(np.isnan(inp.max()),
+                                    msg=repr(inp) + '\n' + msg)
+                    self.assertTrue(np.isnan(inp.min()),
+                                    msg=repr(inp) + '\n' + msg)
 
-                    d[i] = 1e10
-                    assert_equal(d.max(), 1e10)
-                    d[i] = -1e10
-                    assert_equal(d.min(), -1e10)
+                    inp[i] = 1e10
+                    assert_equal(inp.max(), 1e10, err_msg=msg)
+                    inp[i] = -1e10
+                    assert_equal(inp.min(), -1e10, err_msg=msg)
+
 
     def test_addsumprod (self):
         "Tests add, sum, product."
