@@ -53,7 +53,7 @@
  *****************************************************************************
  */
 
-#define IS_ALIGNED(p, alignment) ((npy_intp)(p) & (alignment - 1))
+#define IS_ALIGNED(p, alignment) (((npy_intp)(p) & ((alignment) - 1)) == 0)
 
 #define IS_BINARY_REDUCE ((args[0] == args[2])\
         && (steps[0] == steps[2])\
@@ -227,23 +227,17 @@ PyUFunc_f_f(char **args, npy_intp *dimensions, npy_intp *steps, void *func)
     if (f == npy_sqrtf && IS_BLOCKABLE_UNARY(sizeof(float), 16)) {
         UNARY_LOOP_PEEL(float, 16)
             op1[i] = npy_sqrtf(ip1[i]);
-        /* in and out can have different alignment */
-        if (IS_ALIGNED(&op1[i], 16) && IS_ALIGNED(&ip1[i], 16)) {
+        assert(IS_ALIGNED(&op1[i]));
+        if (IS_ALIGNED(&ip1[i], 16)) {
             UNARY_LOOP_BLOCKED(float, 16) {
                 __m128 d = _mm_load_ps(&ip1[i]);
-                _mm_store_ps(&op1[i], _mm_sqrt_ps(d));
-            }
-        }
-        else if (IS_ALIGNED(&op1[i], 16) && !IS_ALIGNED(&ip1[i], 16)) {
-            UNARY_LOOP_BLOCKED(float, 16) {
-                __m128 d = _mm_loadu_ps(&ip1[i]);
                 _mm_store_ps(&op1[i], _mm_sqrt_ps(d));
             }
         }
         else {
             UNARY_LOOP_BLOCKED(float, 16) {
                 __m128 d = _mm_loadu_ps(&ip1[i]);
-                _mm_storeu_ps(&op1[i], _mm_sqrt_ps(d));
+                _mm_store_ps(&op1[i], _mm_sqrt_ps(d));
             }
         }
         UNARY_LOOP_BLOCKED_END
@@ -339,23 +333,17 @@ PyUFunc_d_d(char **args, npy_intp *dimensions, npy_intp *steps, void *func)
     if (f == npy_sqrt && IS_BLOCKABLE_UNARY(sizeof(double), 16)) {
         UNARY_LOOP_PEEL(double, 16)
             op1[i] = npy_sqrt(ip1[i]);
-        /* in and out can have different alignment */
-        if (IS_ALIGNED(&op1[i], 16) && IS_ALIGNED(&ip1[i], 16)) {
+        assert(IS_ALIGNED(&op1[i]));
+        if (IS_ALIGNED(&ip1[i], 16)) {
             UNARY_LOOP_BLOCKED(double, 16) {
                 __m128d d = _mm_load_pd(&ip1[i]);
-                _mm_store_pd(&op1[i], _mm_sqrt_pd(d));
-            }
-        }
-        else if (IS_ALIGNED(&op1[i], 16) && !IS_ALIGNED(&ip1[i], 16)) {
-            UNARY_LOOP_BLOCKED(double, 16) {
-                __m128d d = _mm_loadu_pd(&ip1[i]);
                 _mm_store_pd(&op1[i], _mm_sqrt_pd(d));
             }
         }
         else {
             UNARY_LOOP_BLOCKED(double, 16) {
                 __m128d d = _mm_loadu_pd(&ip1[i]);
-                _mm_storeu_pd(&op1[i], _mm_sqrt_pd(d));
+                _mm_store_pd(&op1[i], _mm_sqrt_pd(d));
             }
         }
         UNARY_LOOP_BLOCKED_END
