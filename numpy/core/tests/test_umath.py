@@ -4,6 +4,7 @@ import sys
 import platform
 
 from numpy.testing import *
+from numpy.testing.utils import gen_alignment_data
 import numpy.core.umath as ncu
 import numpy as np
 
@@ -100,34 +101,20 @@ class TestPower(TestCase):
         assert_almost_equal(x**(-1), [1., 0.5, 1./3])
         assert_almost_equal(x**(0.5), [1., ncu.sqrt(2), ncu.sqrt(3)])
 
-        # test a couple simd blocking cases
-        for o in range(15):
-            for n in range(27):
-                # out unaligned
-                x = np.arange(n, dtype=np.float64)[o:]
-                assert_almost_equal(x**(0.5), [ncu.sqrt(i) for i in x])
-                x = np.arange(n, dtype=np.float32)[o:]
-                assert_almost_equal(x**(0.5), [ncu.sqrt(i) for i in x])
+        for out, inp, msg in gen_alignment_data(dtype=np.float32,
+                                                type='unary'):
+            exp = [ncu.sqrt(i) for i in inp]
+            assert_almost_equal(inp**(0.5), exp, err_msg=msg)
+            np.sqrt(inp, out=out)
+            assert_equal(out, exp, err_msg=msg)
 
-                # in/out same alignment
-                x = np.arange(n, dtype=np.float64)[o:]
-                out = np.arange(n, dtype=np.float64)[o:]
-                np.sqrt(x, out=out)
-                assert_almost_equal(out, [ncu.sqrt(i) for i in x])
-                x = np.arange(n, dtype=np.float32)[o:]
-                out = np.arange(n, dtype=np.float32)[o:]
-                np.sqrt(x, out=out)
-                assert_almost_equal(out, [ncu.sqrt(i) for i in x])
+        for out, inp, msg in gen_alignment_data(dtype=np.float64,
+                                                type='unary'):
+            exp = [ncu.sqrt(i) for i in inp]
+            assert_almost_equal(inp**(0.5), exp, err_msg=msg)
+            np.sqrt(inp, out=out)
+            assert_equal(out, exp, err_msg=msg)
 
-                # different alignment
-                x = np.arange(n, dtype=np.float64)[o:]
-                out = np.arange(n + 1, dtype=np.float64)[o + 1:]
-                np.sqrt(x, out=out)
-                assert_almost_equal(out, [ncu.sqrt(i) for i in x])
-                x = np.arange(n, dtype=np.float32)[o:]
-                out = np.arange(n + 1, dtype=np.float32)[o + 1:]
-                np.sqrt(x, out=out)
-                assert_almost_equal(out, [ncu.sqrt(i) for i in x])
 
     def test_power_complex(self):
         x = np.array([1+2j, 2+3j, 3+4j])

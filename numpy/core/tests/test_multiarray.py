@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 from nose import SkipTest
 from numpy.core import *
-from numpy.testing.utils import WarningManager
+from numpy.testing.utils import WarningManager, gen_alignment_data
 from numpy.compat import asbytes, getexception, strchar, sixu
 from test_print import in_foreign_locale
 from numpy.core.multiarray_tests import (
@@ -2943,18 +2943,15 @@ class TestByteSwap(TestCase):
 
     def test_basics(self):
         for dt in self.dtype:
-            # check different and sizes and offets for loop blocking
-            for o in range(0, 8):
-                for s in range(1, 20):
-                    a = np.arange(s, dtype=dt)[o:]
-                    sw = a.byteswap()
-                    a.byteswap(True)
-                    assert_equal(a, sw)
+            for out, inp, msg in gen_alignment_data(dt, type='unary'):
+                sw = inp.byteswap()
+                inp.byteswap(True)
+                assert_equal(inp, sw)
 
-                    a = np.zeros((s,), dtype=dt)[o:] + 5
-                    sw = np.zeros((s,), dtype=dt)[o:] + self.s5[dt]
-                    a.byteswap(True)
-                    assert_equal(a, sw)
+                inp.fill(5)
+                sw = zeros_like(inp) + self.s5[dt]
+                inp.byteswap(True)
+                assert_equal(inp, sw)
 
 
 if __name__ == "__main__":
