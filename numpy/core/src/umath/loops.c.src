@@ -1430,8 +1430,8 @@ static NPY_INLINE __m128d npy_broadcast_DOUBLE(const double x)
 * # VOP = _mm_add, _mm_sub, _mm_mul, _mm_div#
 */
 static void
-binary_u_@TYPE@_@kind@(char **args, npy_intp *dimensions,
-                       npy_intp *steps)
+binary_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                     npy_intp *steps)
 {
     BINARY_LOOP_PEEL(@type@, 16)
         op1[i] = ip1[i] @OP@ ip2[i];
@@ -1473,8 +1473,8 @@ binary_u_@TYPE@_@kind@(char **args, npy_intp *dimensions,
 
 
 static void
-binary_uscalar1_@TYPE@_@kind@(char **args, npy_intp *dimensions,
-                              npy_intp *steps)
+binary_scalar1_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                             npy_intp *steps)
 {
     const @vtype@ a = npy_broadcast_@TYPE@(*(@type@*)args[0]);
     BINARY_LOOP_PEEL(@type@, 16)
@@ -1498,8 +1498,8 @@ binary_uscalar1_@TYPE@_@kind@(char **args, npy_intp *dimensions,
 }
 
 static void
-binary_uscalar2_@TYPE@_@kind@(char **args, npy_intp *dimensions,
-                              npy_intp *steps)
+binary_scalar2_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                             npy_intp *steps)
 {
     const @vtype@ b = npy_broadcast_@TYPE@(*(@type@*)args[1]);
     BINARY_LOOP_PEEL(@type@, 16)
@@ -1586,14 +1586,14 @@ binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
 #if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@
         /* argument one scalar */
         if (IS_BLOCKABLE_SCALAR1(sizeof(@type@), 16)) {
-            binary_uscalar1_@TYPE@_@kind@(args, dimensions, steps);
+            binary_scalar1_@TYPE@_@kind@(args, dimensions, steps);
         }
         /* argument two scalar */
         else if (IS_BLOCKABLE_SCALAR2(sizeof(@type@), 16)) {
-            binary_uscalar2_@TYPE@_@kind@(args, dimensions, steps);
+            binary_scalar2_@TYPE@_@kind@(args, dimensions, steps);
         }
         else if (IS_BLOCKABLE(sizeof(@type@), 16)) {
-            binary_u_@TYPE@_@kind@(args, dimensions, steps);
+            binary_@TYPE@_@kind@(args, dimensions, steps);
         }
         else
 #endif
