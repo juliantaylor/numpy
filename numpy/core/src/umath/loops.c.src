@@ -46,17 +46,21 @@
 */
 #define IS_BLOCKABLE(esize, vsize) \
     (steps[0] == steps[1] && steps[1] == steps[2] && steps[2] == (esize) && \
-    (abs(args[2] - args[0]) >= (vsize) || abs(args[2] - args[0]) == 0) && \
-    (abs(args[2] - args[1]) >= (vsize) || abs(args[2] - args[1]) >= 0))
+     IS_ALIGNED(args[2], (esize)) && IS_ALIGNED(args[1], (esize)) && \
+     IS_ALIGNED(args[0], (esize)) && \
+     (abs(args[2] - args[0]) >= (vsize) || abs(args[2] - args[0]) == 0) && \
+     (abs(args[2] - args[1]) >= (vsize) || abs(args[2] - args[1]) >= 0))
 
 #define IS_BLOCKABLE_SCALAR1(esize, vsize) \
     (steps[0] == 0 && steps[1] == steps[2] && steps[2] == (esize) && \
-    ((abs(args[2] - args[1]) >= (vsize)) || (abs(args[2] - args[1]) == 0)) && \
-    abs(args[2] - args[0]) >= (esize))
+     IS_ALIGNED(args[2], (esize)) && IS_ALIGNED(args[1], (esize)) && \
+     ((abs(args[2] - args[1]) >= (vsize)) || (abs(args[2] - args[1]) == 0)) && \
+     abs(args[2] - args[0]) >= (esize))
 
 #define IS_BLOCKABLE_SCALAR2(esize, vsize) \
     (steps[1] == 0 && steps[0] == steps[2] && steps[2] == (esize) && \
-    ((abs(args[2] - args[0]) >= (vsize)) || (abs(args[2] - args[0]) == 0)) && \
+     IS_ALIGNED(args[2], (esize)) && IS_ALIGNED(args[0], (esize)) && \
+     ((abs(args[2] - args[0]) >= (vsize)) || (abs(args[2] - args[0]) == 0)) && \
      abs(args[2] - args[1]) >= (esize))
 
 #define IS_BLOCKABLE_UNARY(esize, vsize) \
@@ -108,12 +112,15 @@
     npy_intp i;\
     for(i = 0; i < n; i++, ip1 += is1, ip2 += is2, op1 += os1)
 
-#define BINARY_LOOP_BLOCKED(type, vsize)\
+#define BINARY_LOOP_PEEL(type, vsize)\
     type *ip1 = (type *)args[0], *ip2 = (type *)args[1],\
                 *op1 = (type *)args[2];\
     npy_intp n = dimensions[0];\
-    npy_intp i;\
-    for(i = 0; i < npy_blocked_end(0, sizeof(type), vsize, n);\
+    npy_intp i, peel = npy_blocked_peel(op1, sizeof(type), vsize, n);\
+    for(i = 0; i < peel; i++)
+
+#define BINARY_LOOP_BLOCKED(type, vsize)\
+    for(; i < npy_blocked_end(peel, sizeof(type), vsize, n);\
         i += (vsize / sizeof(type)))
 
 #define BINARY_LOOP_BLOCKED_END\
@@ -1426,11 +1433,39 @@ static void
 binary_u_@TYPE@_@kind@(char **args, npy_intp *dimensions,
                        npy_intp *steps)
 {
-    BINARY_LOOP_BLOCKED(@type@, 16) {
-        @vtype@ a = @vloadu@(&ip1[i]);
-        @vtype@ b = @vloadu@(&ip2[i]);
-        @vtype@ c = @VOP@_@VSUF@(a, b);
-        @vstoreu@(&op1[i], c);
+    BINARY_LOOP_PEEL(@type@, 16)
+        op1[i] = ip1[i] @OP@ ip2[i];
+    if (IS_ALIGNED(&ip1[i], 16) && IS_ALIGNED(&ip2[i], 16)) {
+        BINARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vload@(&ip1[i]);
+            @vtype@ b = @vload@(&ip2[i]);
+            @vtype@ c = @VOP@_@VSUF@(a, b);
+            @vstore@(&op1[i], c);
+        }
+    }
+    else if (IS_ALIGNED(&ip1[i], 16)) {
+        BINARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vload@(&ip1[i]);
+            @vtype@ b = @vloadu@(&ip2[i]);
+            @vtype@ c = @VOP@_@VSUF@(a, b);
+            @vstore@(&op1[i], c);
+        }
+    }
+    else if (IS_ALIGNED(&ip2[i], 16)) {
+        BINARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vloadu@(&ip1[i]);
+            @vtype@ b = @vload@(&ip2[i]);
+            @vtype@ c = @VOP@_@VSUF@(a, b);
+            @vstore@(&op1[i], c);
+        }
+    }
+    else {
+        BINARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vloadu@(&ip1[i]);
+            @vtype@ b = @vloadu@(&ip2[i]);
+            @vtype@ c = @VOP@_@VSUF@(a, b);
+            @vstore@(&op1[i], c);
+        }
     }
     BINARY_LOOP_BLOCKED_END
         op1[i] = ip1[i] @OP@ ip2[i];
@@ -1442,10 +1477,21 @@ binary_uscalar1_@TYPE@_@kind@(char **args, npy_intp *dimensions,
                               npy_intp *steps)
 {
     const @vtype@ a = npy_broadcast_@TYPE@(*(@type@*)args[0]);
-    BINARY_LOOP_BLOCKED(@type@, 16) {
-        @vtype@ b = @vloadu@(&ip2[i]);
-        @vtype@ c = @VOP@_@VSUF@(a, b);
-        @vstoreu@(&op1[i], c);
+    BINARY_LOOP_PEEL(@type@, 16)
+        op1[i] = ip1[0] @OP@ ip2[i];
+    if (IS_ALIGNED(&ip2[i], 16)) {
+        BINARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ b = @vload@(&ip2[i]);
+            @vtype@ c = @VOP@_@VSUF@(a, b);
+            @vstore@(&op1[i], c);
+        }
+    }
+    else {
+        BINARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ b = @vloadu@(&ip2[i]);
+            @vtype@ c = @VOP@_@VSUF@(a, b);
+            @vstore@(&op1[i], c);
+        }
     }
     BINARY_LOOP_BLOCKED_END
         op1[i] = ip1[0] @OP@ ip2[i];
@@ -1456,10 +1502,21 @@ binary_uscalar2_@TYPE@_@kind@(char **args, npy_intp *dimensions,
                               npy_intp *steps)
 {
     const @vtype@ b = npy_broadcast_@TYPE@(*(@type@*)args[1]);
-    BINARY_LOOP_BLOCKED(@type@, 16) {
-        @vtype@ a = @vloadu@(&ip1[i]);
-        @vtype@ c = @VOP@_@VSUF@(a, b);
-        @vstoreu@(&op1[i], c);
+    BINARY_LOOP_PEEL(@type@, 16)
+        op1[i] = ip1[i] @OP@ ip2[0];
+    if (IS_ALIGNED(&ip1[i], 16)) {
+        BINARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vloadu@(&ip1[i]);
+            @vtype@ c = @VOP@_@VSUF@(a, b);
+            @vstore@(&op1[i], c);
+        }
+    }
+    else {
+        BINARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vloadu@(&ip1[i]);
+            @vtype@ c = @VOP@_@VSUF@(a, b);
+            @vstore@(&op1[i], c);
+        }
     }
     BINARY_LOOP_BLOCKED_END
         op1[i] = ip1[i] @OP@ ip2[0];
