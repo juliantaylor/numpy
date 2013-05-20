@@ -687,6 +687,17 @@ class TestSign(TestCase):
             np.seterr(**olderr)
 
 
+
+class TestAbsolute(TestCase):
+    def test_blocked(self):
+        for dt in [np.float32, np.float64]:
+            for out, inp, msg in gen_alignment_data(dtype=dt, type='unary'):
+                exp = [ncu.absolute(i) for i in inp]
+                np.absolute(inp, out=out)
+                assert_equal(out, exp, err_msg=msg)
+                self.assertTrue((out >= 0).all())
+
+
 class TestSpecialMethods(TestCase):
     def test_wrap(self):
         class with_wrap(object):
