@@ -1412,7 +1412,7 @@ static NPY_INLINE __m128d npy_broadcast_DOUBLE(const double x)
 * Float types
 *  #type = npy_float, npy_double#
 *  #TYPE = FLOAT, DOUBLE#
-*  #c = ps, pd#
+*  #c = f, #
 *  #vload = _mm_load_ps, _mm_load_pd#
 *  #vstore = _mm_store_ps, _mm_store_pd#
 *  #vloadu = _mm_loadu_ps, _mm_loadu_pd#
@@ -1547,7 +1547,36 @@ binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
     BINARY_REDUCE_LOOP_BLOCKED_END
         *op1 @OP@= ip2[i];
 }
+
 /**end repeat1**/
+
+static void
+sse2_absolute_@TYPE@(char **args, npy_intp *dimensions, npy_intp *steps)
+{
+    const @vtype@ mask = _mm_set1_@VSUF@(-0.@c@);
+    UNARY_LOOP_PEEL(@type@, 16) {
+        const @type@ tmp = ip1[i] > 0 ? ip1[i]: -ip1[i];
+        /* add 0 to clear -0.0 */
+        op1[i] = tmp + 0;
+    }
+    if (IS_ALIGNED(&ip1[i], 16)) {
+        UNARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vload@(&ip1[i]);
+            @vstore@(&op1[i], _mm_andnot_@VSUF@(mask, a));
+        }
+    }
+    else {
+        UNARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = @vloadu@(&ip1[i]);
+            @vstore@(&op1[i], _mm_andnot_@VSUF@(mask, a));
+        }
+    }
+    BINARY_LOOP_BLOCKED_END {
+        const @type@ tmp = ip1[i] > 0 ? ip1[i]: -ip1[i];
+        /* add 0 to clear -0.0 */
+        op1[i] = tmp + 0;
+    }
+}
 /**end repeat**/
 
 /**begin repeat
@@ -1850,11 +1879,20 @@ NPY_NO_EXPORT void
 NPY_NO_EXPORT void
 @TYPE@_absolute(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
 {
-    UNARY_LOOP {
-        const @type@ in1 = *(@type@ *)ip1;
-        const @type@ tmp = in1 > 0 ? in1 : -in1;
-        /* add 0 to clear -0.0 */
-        *((@type@ *)op1) = tmp + 0;
+#if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@
+    /* argument one scalar */
+    if (IS_BLOCKABLE_UNARY(sizeof(@type@), 16)) {
+        sse2_absolute_@TYPE@(args, dimensions, steps);
+    }
+    else
+#endif
+    {
+        UNARY_LOOP {
+            const @type@ in1 = *(@type@ *)ip1;
+            const @type@ tmp = in1 > 0 ? in1 : -in1;
+            /* add 0 to clear -0.0 */
+            *((@type@ *)op1) = tmp + 0;
+        }
     }
 }
 
