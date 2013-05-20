@@ -4,7 +4,7 @@ import timeit
 def time(fun, dtype, size=10000, number=1000):
     t = timeit.timeit(setup="import numpy as np; d = np.ones((%s,), dtype=%s)" % (size, dtype),
                       stmt=fun, number=number)
-    n = "%s %s:" % (dtype, fun)
+    n = "%s %s#" % (dtype, fun)
     print "%s %s" % (n, ("%0.3g" % t).rjust(40 - len(n)))
 
 if __name__ == "__main__":
@@ -23,9 +23,12 @@ if __name__ == "__main__":
             time("np.prod(d)", dt, s)
             time("np.add(1, d)", dt, s)
             time("np.add(d, 1)", dt, s)
-            time("np.divide(1, d)", dt, s)
+            time("np.add(d, 1, out=d)", dt, s)
+            time("np.add(d, d, out=d)", dt, s)
             time("np.divide(d, 1)", dt, s)
             time("np.divide(d, d)", dt, s)
             time("np.add(d, d)", dt, s)
             time("np.multiply(d, d)", dt, s)
             time("np.sqrt(d)", dt, s)
+            time("np.abs(d)", dt, s)
+            time("np.abs(d, out=d)", dt, s)
