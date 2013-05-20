@@ -927,6 +927,10 @@ class TestMethods(TestCase):
         assert_array_equal(d[np.argpartition(d, 6)], np.partition(d, 6))
         assert_array_equal(d[np.argpartition(d, 16)], np.partition(d, 16))
 
+        assert_array_equal(np.partition(d, -6), np.partition(d, 41))
+        assert_array_equal(np.partition(d, -16), np.partition(d, 31))
+        assert_array_equal(d[np.argpartition(d, -6)], np.partition(d, 41))
+
         d = np.array([2, 1])
         d.partition(0)
         assert_raises(ValueError, d.partition, 2)

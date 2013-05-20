@@ -1188,11 +1188,6 @@ array_partition(PyArrayObject *self, PyObject *args, PyObject *kwds)
                                      &order)) {
         return NULL;
     }
-    if (kth < 0) {
-        PyErr_SetString(PyExc_ValueError, "kth element to " \
-                        "partition by can't be smaller than zero.");
-        return NULL;
-    }
     if (order == Py_None) {
         order = NULL;
     }

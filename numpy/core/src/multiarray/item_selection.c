@@ -1318,6 +1318,9 @@ PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
         PyErr_Format(PyExc_ValueError, "axis(=%d) out of bounds", axis_orig);
         return -1;
     }
+    if (kth < 0) {
+        kth += shape[axis];
+    }
     if ((kth < 0) || (kth >= shape[axis])) {
         PyErr_Format(PyExc_ValueError, "kth(=%zd) out of bounds (%zd)",
                      kth, shape[axis]);
@@ -1577,6 +1580,9 @@ PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND whi
         return NULL;
     }
     shape = PyArray_SHAPE(op2);
+    if (kth < 0) {
+        kth += shape[axis];
+    }
     if ((kth < 0) || (kth >= shape[axis])) {
         PyErr_Format(PyExc_ValueError, "kth(=%zd) out of bounds (%zd)",
                      kth, shape[axis]);
