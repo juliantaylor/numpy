@@ -1530,7 +1530,7 @@ binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
     BINARY_REDUCE_LOOP_PEEL(@type@, 16) {
         *op1 @OP@= ip2[i];
     }
-    if (i + 32 / sizeof(@type@) <= n) {
+    if (i + 2 * 16 / sizeof(@type@) <= n) {
         int j;
         @type@ v[16 / sizeof(@type@)];
         c = @vload@(&ip2[i]);
@@ -1569,8 +1569,7 @@ binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
 {
     if(IS_BINARY_REDUCE) {
 #if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@
-        if (strcmp("@TYPE@", "FLOAT") == 0 &&
-            (strcmp("@OP@", "+") == 0 || strcmp("@OP@", "*") == 0) &&
+        if ((strcmp("@OP@", "+") == 0 || strcmp("@OP@", "*") == 0) &&
             IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
             binary_reduce_@TYPE@_@kind@(args, dimensions, steps);
         }
@@ -1585,34 +1584,16 @@ binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
     }
     else {
 #if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@
-        /* all constant -> compile time evaluation */
-        if (strcmp("@TYPE@", "FLOAT") == 0 &&
-            IS_BLOCKABLE(sizeof(float), 16)) {
-            binary_u_@TYPE@_@kind@(args, dimensions, steps);
-        }
         /* argument one scalar */
-        else if (strcmp("@TYPE@", "FLOAT") == 0 &&
-                 IS_BLOCKABLE_SCALAR1(sizeof(float), 16)) {
+        if (IS_BLOCKABLE_SCALAR1(sizeof(@type@), 16)) {
             binary_uscalar1_@TYPE@_@kind@(args, dimensions, steps);
         }
         /* argument two scalar */
-        else if (strcmp("@TYPE@", "FLOAT") == 0 &&
-                 IS_BLOCKABLE_SCALAR2(sizeof(float), 16)) {
+        else if (IS_BLOCKABLE_SCALAR2(sizeof(@type@), 16)) {
             binary_uscalar2_@TYPE@_@kind@(args, dimensions, steps);
         }
-        else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
-                 IS_BLOCKABLE(sizeof(double), 16)) {
+        else if (IS_BLOCKABLE(sizeof(@type@), 16)) {
             binary_u_@TYPE@_@kind@(args, dimensions, steps);
-        }
-        /* argument one scalar */
-        else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
-                 IS_BLOCKABLE_SCALAR1(sizeof(double), 16)) {
-            binary_uscalar1_@TYPE@_@kind@(args, dimensions, steps);
-        }
-        /* argument two scalar */
-        else if (strcmp("@TYPE@", "DOUBLE") == 0 &&
-                 IS_BLOCKABLE_SCALAR2(sizeof(double), 16)) {
-            binary_uscalar2_@TYPE@_@kind@(args, dimensions, steps);
         }
         else
 #endif
@@ -1725,10 +1706,10 @@ NPY_NO_EXPORT void
  * :exclude: TYPE=LONGDOUBLE
  **/
         else if (strcmp("@TYPE@", "@VTYPE@") == 0 &&
-            IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
+                 IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
             BINARY_REDUCE_LOOP_PEEL(@type@, 16)
                 *op1 = (*op1 @OP@ ip2[i] || npy_isnan(*op1)) ? *op1 : ip2[i];
-            if (i + 32 / sizeof(@type@) <= n) {
+            if (i + 2 * 16 / sizeof(@type@) <= n) {
                 @vtype@ c = _mm_load_@vsuf@((@ctype@*)&ip2[i]);
                 @vtype@ cnan = _mm_or_@vsuf@(_mm_cmpneq_@vsuf@(c, c), cnan);
                 i += 16 / sizeof(@type@);
