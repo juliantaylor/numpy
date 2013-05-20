@@ -1395,18 +1395,6 @@ TIMEDELTA_mm_d_divide(char **args, npy_intp *dimensions, npy_intp *steps, void *
  *****************************************************************************
  */
 
-static NPY_INLINE __m128 npy_broadcast_FLOAT(const float x)
-{
-    const float __v[4] = {x, x, x, x};
-    return _mm_loadu_ps(__v);
-}
-
-static NPY_INLINE __m128d npy_broadcast_DOUBLE(const double x)
-{
-    const double __v[2] = {x, x};
-    return _mm_loadu_pd(__v);
-}
-
 
 /**begin repeat
 * Float types
@@ -1476,7 +1464,7 @@ static void
 binary_scalar1_@TYPE@_@kind@(char **args, npy_intp *dimensions,
                              npy_intp *steps)
 {
-    const @vtype@ a = npy_broadcast_@TYPE@(*(@type@*)args[0]);
+    const @vtype@ a = _mm_set1_@VSUF@(*(@type@*)args[0]);
     BINARY_LOOP_PEEL(@type@, 16)
         op1[i] = ip1[0] @OP@ ip2[i];
     if (IS_ALIGNED(&ip2[i], 16)) {
@@ -1501,7 +1489,7 @@ static void
 binary_scalar2_@TYPE@_@kind@(char **args, npy_intp *dimensions,
                              npy_intp *steps)
 {
-    const @vtype@ b = npy_broadcast_@TYPE@(*(@type@*)args[1]);
+    const @vtype@ b = _mm_set1_@VSUF@(*(@type@*)args[1]);
     BINARY_LOOP_PEEL(@type@, 16)
         op1[i] = ip1[i] @OP@ ip2[0];
     if (IS_ALIGNED(&ip1[i], 16)) {
