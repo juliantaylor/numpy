@@ -1395,6 +1395,7 @@ TIMEDELTA_mm_d_divide(char **args, npy_intp *dimensions, npy_intp *steps, void *
  *****************************************************************************
  */
 
+#ifdef HAVE_EMMINTRIN_H
 
 /**begin repeat
 * Float types
@@ -1566,6 +1567,8 @@ sse2_absolute_@TYPE@(char **args, npy_intp *dimensions, npy_intp *steps)
     }
 }
 /**end repeat**/
+
+#endif
 
 /**begin repeat
  * Float types
