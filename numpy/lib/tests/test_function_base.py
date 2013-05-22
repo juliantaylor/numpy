@@ -1529,6 +1529,7 @@ def test_median():
     assert_allclose(np.median(a2), 2.5)
     assert_allclose(np.median(a2, axis=0), [1.5,  2.5,  3.5])
     assert_allclose(np.median(a2, axis=1), [1, 4])
+    assert_allclose(np.median(a2, axis=None), 2.5)
 
     a = np.array([0.0444502, 0.0463301, 0.141249, 0.0606775])
     assert_almost_equal((a[1] + a[3]) / 2., np.median(a))
@@ -1537,6 +1538,13 @@ def test_median():
     a = np.array([0.0444502, 0.141249, 0.0463301])
     assert_almost_equal(a[-1], np.median(a))
 
+    assert_allclose(np.median(a0.copy(), overwrite_input=True), 1)
+    assert_allclose(np.median(a1.copy(), overwrite_input=True), 0.5)
+    assert_allclose(np.median(a2.copy(), overwrite_input=True), 2.5)
+    assert_allclose(np.median(a2.copy(), overwrite_input=True, axis=0),
+                    [1.5,  2.5,  3.5])
+    assert_allclose(np.median(a2.copy(), overwrite_input=True, axis=1), [1, 4])
+    assert_allclose(np.median(a2.copy(), overwrite_input=True, axis=None), 2.5)
 
 
 class TestAdd_newdoc_ufunc(TestCase):
