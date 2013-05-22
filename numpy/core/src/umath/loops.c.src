@@ -1491,7 +1491,7 @@ binary_scalar2_@TYPE@_@kind@(char **args, npy_intp *dimensions,
         op1[i] = ip1[i] @OP@ ip2[0];
     if (IS_ALIGNED(&ip1[i], 16)) {
         BINARY_LOOP_BLOCKED(@type@, 16) {
-            @vtype@ a = @vloadu@(&ip1[i]);
+            @vtype@ a = @vload@(&ip1[i]);
             @vtype@ c = @VOP@_@VSUF@(a, b);
             @vstore@(&op1[i], c);
         }
