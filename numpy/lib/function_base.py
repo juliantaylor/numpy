@@ -2981,15 +2981,20 @@ def median(a, axis=None, out=None, overwrite_input=False):
             part = a.ravel()
             sz = part.size
             if sz % 2 == 0:
-                part.partition((sz // 2) - 1)
-                part[sz // 2:].partition(0)
+                szh = sz // 2
+                part.partition(szh - 1)
+                m = part[szh:].argmin() + szh
+                part[m], part[szh] = part[szh], part[m]
             else:
                 part.partition((sz - 1) // 2)
         else:
             sz = a.shape[axis]
             if sz % 2 == 0:
-                a.partition((sz // 2) - 1, axis=axis)
-                a[sz // 2:].partition(0, axis=axis)
+                szh = sz // 2
+                a.partition(szh - 1, axis=axis)
+                indexer = [slice(None)] * a.ndim
+                indexer[axis] = slice(szh, sz)
+                a[indexer].partition(0, axis=axis)
             else:
                 a.partition((sz - 1)// 2, axis=axis)
             part = a
@@ -3000,7 +3005,11 @@ def median(a, axis=None, out=None, overwrite_input=False):
             sz = a.shape[axis]
         if sz % 2 == 0:
             part = partition(a, (sz // 2) - 1, axis=axis)
-            part[sz // 2:].partition(0)
+            indexer = [slice(None)] * part.ndim
+            if axis is None:
+                axis = 0
+            indexer[axis] = slice(sz // 2, sz)
+            part[indexer].partition(0, axis=axis)
         else:
             part = partition(a, (sz - 1) // 2, axis=axis)
     if part.shape == ():
