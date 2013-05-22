@@ -1766,8 +1766,9 @@ get_functions(void)
     }
     funcdata = ((PyUFuncObject *)obj)->data;
     signatures = ((PyUFuncObject *)obj)->types;
-    i = 0;
-    j = 0;
+    /* the first two are loop specializations */
+    i = 4;
+    j = 2;
     while (signatures[i] != NPY_FLOAT) {
         i += 2; j++;
     }

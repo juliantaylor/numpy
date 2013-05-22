@@ -1526,7 +1526,7 @@ def assert_no_warnings(func, *args, **kw):
     return result
 
 
-def gen_alignment_data(dtype=float32, type='binary', max_size=32):
+def gen_alignment_data(dtype=float32, type='binary', max_size=24):
     """
     generator producing data with different alignment and offsets
     to test simd vectorization
@@ -1553,7 +1553,7 @@ def gen_alignment_data(dtype=float32, type='binary', max_size=32):
     """
     ufmt = 'unary offset=(%d, %d), size=%d, dtype=%r, %s'
     bfmt = 'binary offset=(%d, %d, %d), size=%d, dtype=%r, %s'
-    for o in range(4):
+    for o in range(3):
         for s in range(o + 2, max(o + 3, max_size)):
             if type == 'unary':
                 inp = lambda : arange(s, dtype=dtype)[o:]
