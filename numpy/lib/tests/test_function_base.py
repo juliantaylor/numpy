@@ -1566,6 +1566,17 @@ def test_median():
     assert_allclose(np.median(a3.T.copy(), overwrite_input=True, axis=1),
                     [3,  4])
 
+    a4 = np.arange(3 * 4 * 5, dtype=np.float32).reshape((3, 4, 5))
+    map(np.random.shuffle, a4)
+    assert_allclose(np.median(a4, axis=None),
+                    np.median(a4.copy(), axis=None, overwrite_input=True))
+    assert_allclose(np.median(a4, axis=0),
+                    np.median(a4.copy(), axis=0, overwrite_input=True))
+    assert_allclose(np.median(a4, axis=1),
+                    np.median(a4.copy(), axis=1, overwrite_input=True))
+    assert_allclose(np.median(a4, axis=2),
+                    np.median(a4.copy(), axis=2, overwrite_input=True))
+
 
 class TestAdd_newdoc_ufunc(TestCase):
 
