@@ -2976,6 +2976,9 @@ def median(a, axis=None, out=None, overwrite_input=False):
     >>> assert not np.all(a==b)
 
     """
+    if axis is not None and axis > a.ndim:
+        raise ValueError("axis %d out of bounds (%d)" % (axis, a.ndim))
+
     if overwrite_input:
         if axis is None:
             part = a.ravel()
