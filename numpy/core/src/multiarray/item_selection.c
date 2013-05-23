@@ -1344,7 +1344,7 @@ PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
     }
 
     switch (which) {
-        case NPY_QUICKSORT :
+        case NPY_QUICKSELECT :
             sort = npy_quickselect;
             break;
         default:
@@ -1605,7 +1605,7 @@ PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND whi
     }
 
     switch (which) {
-        case NPY_QUICKSORT :
+        case NPY_QUICKSELECT :
             sort = npy_quicksort;
             break;
         default:

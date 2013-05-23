@@ -154,6 +154,11 @@ typedef enum {
 } NPY_SORTKIND;
 #define NPY_NSORTS (NPY_MERGESORT + 1)
 
+typedef enum {
+        NPY_QUICKSELECT=0,
+} NPY_SELECTKIND;
+#define NPY_NSELECTS (NPY_QUICKSELECT + 1)
+
 
 typedef enum {
         NPY_SEARCHLEFT=0,
@@ -494,8 +499,8 @@ typedef struct {
         PyArray_SortFunc *sort[NPY_NSORTS];
         PyArray_ArgSortFunc *argsort[NPY_NSORTS];
 
-        PyArray_PartitionFunc *partition[1];
-        PyArray_ArgPartitionFunc *argpartition[1];
+        PyArray_PartitionFunc *partition[NPY_NSELECTS];
+        PyArray_ArgPartitionFunc *argpartition[NPY_NSELECTS];
 
         /*
          * Dictionary of additional casting functions

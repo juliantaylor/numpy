@@ -536,6 +536,72 @@ def transpose(a, axes=None):
 
 
 def partition(a, kth, axis=-1):
+    """
+    Return a partitioned copy of an array.
+    A partition sorts the kth element into its sorted order and moves all
+    smaller elements before the kth element and all larger elements behind it.
+    The ordering of all elements in the partitions is undefined.
+
+    Parameters
+    ----------
+    a : array_like
+        Array to be sorted.
+    kth : int
+        Element index to partition by. The kth element will be in its final
+        sorted position and all smaller elements will be moved before it and
+        all larger elements behind it.
+        The order all elements in the partitions is undefined.
+    axis : int or None, optional
+        Axis along which to sort. If None, the array is flattened before
+        sorting. The default is -1, which sorts along the last axis.
+    kind : {'quicksort', 'mergesort', 'heapsort'}, optional
+        Sorting algorithm. Default is 'quicksort'.
+    order : list, optional
+        When `a` is a structured array, this argument specifies which fields
+        to compare first, second, and so on.  This list does not need to
+        include all of the fields.
+
+    Returns
+    -------
+    partitioned_array : ndarray
+        Array of the same type and shape as `a`.
+
+    See Also
+    --------
+    ndarray.partition : Method to sort an array in-place.
+    argpartition : Indirect sort.
+
+    Notes
+    -----
+    The various sorting algorithms are characterized by their average speed,
+    worst case performance, work space size, and whether they are stable. A
+    stable sort keeps items with the same key in the same relative
+    order. The three available algorithms have the following
+    properties:
+
+    ============= ======= ============= ============ =======
+       kind        speed   worst case    work space  stable
+    ============= ======= ============= ============ =======
+    'quickselect'    1       O(n^2)          0          no
+    ============= ======= ============= ============ =======
+
+    All the partition algorithms make temporary copies of the data when
+    partitioning along any but the last axis.  Consequently, partitioning
+    along the last axis is faster and uses less space than partitioning
+    along any other axis.
+
+    The sort order for complex numbers is lexicographic. If both the real
+    and imaginary parts are non-nan then the order is determined by the
+    real parts except when they are equal, in which case the order is
+    determined by the imaginary parts.
+
+    Examples
+    --------
+    >>> a = np.array([3, 4, 2, 1])
+    >>> a.partition(2)
+    array([2, 1, 3, 4])
+
+    """
     if axis is None:
         a = asanyarray(a).flatten()
         axis = 0
@@ -545,6 +611,60 @@ def partition(a, kth, axis=-1):
     return a
 
 def argpartition(a, kth, axis=-1):
+    """
+    Returns the indices that would partition an array.
+    A partition sorts the kth element into its sorted order and moves all
+    smaller elements before the kth element and all larger elements behind it.
+    The ordering of all elements in the partitions is undefined.
+
+    Perform an indirect partition along the given axis using the algorithm
+    specified by the `kind` keyword. It returns an array of indices of the
+    same shape as `a` that index data along the given axis in partitioned
+    order.
+
+    Parameters
+    ----------
+    a : array_like
+        Array to sort.
+    kth : int
+        Element index to partition by. The kth element will be in its final
+        sorted position and all smaller elements will be moved before it and
+        all larger elements behind it.
+        The order all elements in the partitions is undefined.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : {'quicksort', 'mergesort', 'heapsort'}, optional
+        Sorting algorithm.
+    order : list, optional
+        When `a` is an array with fields defined, this argument specifies
+        which fields to compare first, second, etc.  Not all fields need be
+        specified.
+
+    Returns
+    -------
+    index_array : ndarray, int
+        Array of indices that partition`a` along the specified axis.
+        In other words, ``a[index_array]`` yields a sorted `a`.
+
+    See Also
+    --------
+    partition : Describes partition algorithms used.
+    ndarray.partition : Inplace partition.
+
+    Notes
+    -----
+    See `partition` for notes on the different sorting algorithms.
+
+    Examples
+    --------
+    One dimensional array:
+
+    >>> x = np.array([3, 4, 2, 1])
+    >>> np.argpartition(x)
+    array([2, 3, 0, 1])
+
+    """
     return a.argpartition(kth, axis)
 
 def sort(a, axis=-1, kind='quicksort', order=None):
