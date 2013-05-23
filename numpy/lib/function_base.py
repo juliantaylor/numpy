@@ -22,7 +22,7 @@ from numpy.core.numeric import ScalarType, dot, where, newaxis, intp, \
         integer, isscalar
 from numpy.core.umath import pi, multiply, add, arctan2,  \
         frompyfunc, isnan, cos, less_equal, sqrt, sin, mod, exp, log10
-from numpy.core.fromnumeric import ravel, nonzero, choose, sort, mean
+from numpy.core.fromnumeric import ravel, nonzero, choose, sort, partition, mean
 from numpy.core.numerictypes import typecodes, number
 from numpy.core import atleast_1d, atleast_2d
 from numpy.lib.twodim_base import diag
@@ -2996,30 +2996,80 @@ def median(a, axis=None, out=None, overwrite_input=False):
     >>> assert not np.all(a==b)
 
     """
+    if axis is not None and axis > a.ndim:
+        raise ValueError("axis %d out of bounds (%d)" % (axis, a.ndim))
+
     if overwrite_input:
         if axis is None:
-            sorted = a.ravel()
-            sorted.sort()
+            part = a.ravel()
+            sz = part.size
+            if sz % 2 == 0:
+                szh = sz // 2
+                part.partition(szh - 1)
+                # get minimum of remaining partition, faster than
+                # part[szh:].partition(0)
+                m = part[szh:].argmin() + szh
+                part[m], part[szh] = part[szh], part[m]
+            else:
+                part.partition((sz - 1) // 2)
         else:
-            a.sort(axis=axis)
-            sorted = a
+            sz = a.shape[axis]
+            if sz % 2 == 0:
+                szh = sz // 2
+                a.partition(szh - 1, axis=axis)
+                idx = [slice(None)] * a.ndim
+                idx[axis] = slice(szh, sz)
+                # get minimum of remaining partition, faster than
+                # a[idx].partition(0, axis=axis)
+                m = a[idx].argmin(axis=axis) + szh
+                idx = [np.arange(x)[:, np.newaxis] for x in a.shape[:axis]]
+                idx += [m]
+                idx += [np.arange(x) for x in a.shape[axis + 1:]]
+                idx2 = idx[:]
+                idx2[axis] = np.zeros_like(m) + szh
+                a[idx], a[idx2] = a[idx2], a[idx]
+            else:
+                a.partition((sz - 1)// 2, axis=axis)
+            part = a
     else:
-        sorted = sort(a, axis=axis)
-    if sorted.shape == ():
+        if axis is None:
+            sz = a.size
+        else:
+            sz = a.shape[axis]
+        if sz % 2 == 0:
+            part = partition(a, (sz // 2) - 1, axis=axis)
+            indexer = [slice(None)] * part.ndim
+            if axis is None:
+                axis = 0
+            indexer[axis] = slice(sz // 2, sz)
+            # get minimum of remaining partition, faster than
+            # part[indexer].partition(0, axis=axis)
+            m = part[indexer].min(axis=axis)
+            # extend minimum axis
+            if not np.isscalar(m):
+                indexer2 = indexer[:]
+                indexer2[axis] = np.newaxis
+                m = m[indexer2]
+            indexer[axis] = slice(sz // 2, sz // 2 + 1)
+            # working on copy -> we can overwrite first entry with copy
+            part[indexer] = m
+        else:
+            part = partition(a, (sz - 1) // 2, axis=axis)
+    if part.shape == ():
         # make 0-D arrays work
-        return sorted.item()
+        return part.item()
     if axis is None:
         axis = 0
-    indexer = [slice(None)] * sorted.ndim
-    index = int(sorted.shape[axis]/2)
-    if sorted.shape[axis] % 2 == 1:
+    indexer = [slice(None)] * part.ndim
+    index = part.shape[axis] // 2
+    if part.shape[axis] % 2 == 1:
         # index with slice to allow mean (below) to work
         indexer[axis] = slice(index, index+1)
     else:
         indexer[axis] = slice(index-1, index+1)
     # Use mean in odd and even case to coerce data type
     # and check, use out array.
-    return mean(sorted[indexer], axis=axis, out=out)
+    return mean(part[indexer], axis=axis, out=out)
 
 def percentile(a, q, axis=None, out=None, overwrite_input=False):
     """
