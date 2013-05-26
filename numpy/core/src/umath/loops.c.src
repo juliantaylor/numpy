@@ -52,6 +52,9 @@ static NPY_INLINE int npy_is_aligned(const void * p, const npy_intp alignment)
      (npy_is_aligned(args[0], esize) && npy_is_aligned(args[1], esize)) && \
      ((abs(args[1] - args[0]) >= (vsize)) || ((abs(args[1] - args[0]) == 0))))
 
+#define IS_BLOCKABLE_REDUCE(esize, vsize) \
+    (steps[1] == (esize) && abs(args[1] - args[0]) >= (vsize))
+
 #define OUTPUT_LOOP\
     char *op1 = args[1];\
     npy_intp os1 = steps[1];\
@@ -107,6 +110,19 @@ static NPY_INLINE int npy_is_aligned(const void * p, const npy_intp alignment)
     char *iop1 = args[0]; \
     TYPE io1 = *(TYPE *)iop1; \
     BINARY_REDUCE_LOOP_INNER
+
+#define BINARY_REDUCE_LOOP_BLOCK_ALIGN_IN(type, vsize)\
+    type *op1 = (type*)args[0], *ip2 = (type*)args[1];\
+    npy_intp n = dimensions[0];\
+    npy_intp i, peel = npy_aligned_block_offset(ip2, sizeof(type), vsize, n);\
+    for(i = 0; i < peel; i++)
+
+#define BINARY_REDUCE_LOOP_BLOCKED(type, vsize)\
+    for(; i < npy_blocked_end(peel, sizeof(type), vsize, n);\
+        i += (vsize / sizeof(type)))
+
+#define BINARY_REDUCE_LOOP_BLOCKED_END\
+    for (; i < n; i++)
 
 #define BINARY_LOOP_TWO_OUT\
     char *ip1 = args[0], *ip2 = args[1], *op1 = args[2], *op2 = args[3];\
@@ -1348,6 +1364,103 @@ NPY_NO_EXPORT void
 /**end repeat**/
 
 
+#ifdef HAVE_EMMINTRIN_H
+
+/**begin repeat
+* associative reductions on a vector
+* # VOP = min, max#
+*/
+#define NPY_HAVE_SIMD_ASSOCIATIVE_@VOP@
+static NPY_INLINE npy_float sse2_horizontal_@VOP@___m128(__m128 v)
+{
+    npy_float r;
+    __m128 tmp = _mm_movehl_ps(v, v);                   /* c     d     ... */
+    __m128 m = _mm_@VOP@_ps(v, tmp);                    /* m(ac) m(bd) ... */
+    tmp = _mm_shuffle_ps(m, m, _MM_SHUFFLE(1, 1, 1, 1));/* m(bd) m(bd) ... */
+    _mm_store_ss(&r, _mm_@VOP@_ps(tmp, m));             /* m(acbd) ... */
+    return r;
+}
+
+static NPY_INLINE npy_double sse2_horizontal_@VOP@___m128d(__m128d v)
+{
+    npy_double r;
+    __m128d tmp = _mm_unpackhi_pd(v, v);    /* b     b */
+    _mm_store_sd(&r, _mm_@VOP@_pd(tmp, v)); /* m(ab) m(bb) */
+    return r;
+}
+
+/**end repeat**/
+
+/**begin repeat
+* Float types
+*  #type = npy_float, npy_double#
+*  #TYPE = FLOAT, DOUBLE#
+*  #c = f, #
+*  #VSUF = ps, pd#
+*  #vtype = __m128, __m128d#
+*  #nan = NPY_NANF, NPY_NAN#
+*/
+
+#define NPY_HAVE_SIMD_@TYPE@
+
+
+/**begin repeat1
+ * #kind = maximum, minimum#
+ * #VOP = max, min#
+ * #OP = >=, <=#
+ **/
+static void
+sse2_minmax_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                          npy_intp *steps)
+{
+    BINARY_REDUCE_LOOP_BLOCK_ALIGN_IN(@type@, 16) {
+        *op1 = (*op1 @OP@ ip2[i] || npy_isnan(*op1)) ? *op1 : ip2[i];
+    }
+    assert(npy_is_aligned(&ip2[i], 16));
+    if (i + 2 * 16 / sizeof(@type@) <= n) {
+        /* load the first elements */
+        @vtype@ c = _mm_load_@VSUF@((@type@*)&ip2[i]);
+#ifdef NO_FLOATING_POINT_SUPPORT
+        @vtype@ cnan = _mm_or_@VSUF@(_mm_cmpneq_@VSUF@(c, c), cnan);
+#else
+        /* minps/minpd will set invalid flag if nan is encountered */
+        PyUFunc_clearfperr();
+#endif
+        i += 16 / sizeof(@type@);
+
+        BINARY_REDUCE_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ v = _mm_load_@VSUF@((@type@*)&ip2[i]);
+            c = _mm_@VOP@_@VSUF@(c, v);
+#ifdef NO_FLOATING_POINT_SUPPORT
+            /* check for nan, breaking the loop makes non nan case slow */
+            cnan = _mm_or_@VSUF@(_mm_cmpneq_@VSUF@(v, v), cnan);
+        }
+
+        if (_mm_movemask_@VSUF@(cnan)) {
+            *op1 = @nan@;
+            return;
+        }
+#else
+        }
+#endif
+        {
+            @type@ tmp = sse2_horizontal_@VOP@_@vtype@(c);
+            if (PyUFunc_getfperr() & UFUNC_FPE_INVALID)
+                *op1 = @nan@;
+            else
+                *op1  = (*op1 @OP@ tmp || npy_isnan(*op1)) ? *op1 : tmp;
+        }
+    }
+    BINARY_REDUCE_LOOP_BLOCKED_END {
+        *op1  = (*op1 @OP@ ip2[i] || npy_isnan(*op1)) ? *op1 : ip2[i];
+    }
+}
+/**end repeat1**/
+
+/**end repeat**/
+
+#endif
+
 /**begin repeat
  * Float types
  *  #type = npy_float, npy_double, npy_longdouble#
@@ -1461,18 +1574,26 @@ NPY_NO_EXPORT void
 
 /**begin repeat1
  * #kind = maximum, minimum#
- * #OP =  >=, <=#
+ * #OP = >=, <=#
  **/
 NPY_NO_EXPORT void
 @TYPE@_@kind@(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
 {
     /*  */
     if (IS_BINARY_REDUCE) {
-        BINARY_REDUCE_LOOP(@type@) {
-            const @type@ in2 = *(@type@ *)ip2;
-            io1 = (io1 @OP@ in2 || npy_isnan(io1)) ? io1 : in2;
+#if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@
+        if (IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
+            sse2_minmax_@TYPE@_@kind@(args, dimensions, steps);
         }
-        *((@type@ *)iop1) = io1;
+        else
+#endif
+        {
+            BINARY_REDUCE_LOOP(@type@) {
+                const @type@ in2 = *(@type@ *)ip2;
+                io1 = (io1 @OP@ in2 || npy_isnan(io1)) ? io1 : in2;
+            }
+            *((@type@ *)iop1) = io1;
+        }
     }
     else {
         BINARY_LOOP {
