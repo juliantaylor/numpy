@@ -1401,7 +1401,7 @@ NPY_NO_EXPORT void
 
 /**begin repeat
 * associative reductions on a vector
-* # VOP = min, max#
+* # VOP = add, mul, min, max#
 */
 #define NPY_HAVE_SIMD_ASSOCIATIVE_@VOP@
 static NPY_INLINE npy_float sse2_horizontal_@VOP@___m128(__m128 v)
@@ -1538,6 +1538,32 @@ sse2_binary_scalar2_@TYPE@_@kind@(char **args, npy_intp *dimensions,
     }
 }
 
+#if defined NPY_HAVE_SIMD_ASSOCIATIVE_@VOP@
+static void
+sse2_binary_reduce_@TYPE@_@kind@(char **args, npy_intp *dimensions,
+                                 npy_intp *steps)
+{
+    @vtype@  c;
+    BINARY_REDUCE_LOOP_BLOCK_ALIGN_IN(@type@, 16) {
+        *op1 @OP@= ip2[i];
+    }
+    assert(npy_is_aligned(&ip2[i], 16));
+    if (i + 2 * 16 / sizeof(@type@) <= n) {
+        /* load first elements */
+        c = _mm_load_@VSUF@(&ip2[i]);
+        i += 16 / sizeof(@type@);
+
+        BINARY_REDUCE_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = _mm_load_@VSUF@(&ip2[i]);
+            c  = _mm_@VOP@_@VSUF@(c, a);
+        }
+        *op1 @OP@= sse2_horizontal_@VOP@_@vtype@(c);
+    }
+    BINARY_REDUCE_LOOP_BLOCKED_END {
+        *op1 @OP@= ip2[i];
+    }
+}
+#endif
 
 /**end repeat1**/
 
@@ -1640,15 +1666,24 @@ sse2_absolute_@TYPE@(char **args, npy_intp *dimensions, npy_intp *steps)
  * Arithmetic
  * # kind = add, subtract, multiply, divide#
  * # OP = +, -, *, /#
+ * # VOP = add, sub, mul, div#
  */
 NPY_NO_EXPORT void
 @TYPE@_@kind@(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
 {
     if(IS_BINARY_REDUCE) {
-        BINARY_REDUCE_LOOP(@type@) {
-            io1 @OP@= *(@type@ *)ip2;
+#if defined NPY_HAVE_SIMD_@TYPE@ && defined NPY_HAVE_SIMD_ASSOCIATIVE_@VOP@
+        if (IS_BLOCKABLE_REDUCE(sizeof(@type@), 16)) {
+            sse2_binary_reduce_@TYPE@_@kind@(args, dimensions, steps);
         }
-        *((@type@ *)iop1) = io1;
+        else
+#endif
+        {
+            BINARY_REDUCE_LOOP(@type@) {
+                io1 @OP@= *(@type@ *)ip2;
+            }
+            *((@type@ *)iop1) = io1;
+        }
     }
     else {
 #if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@

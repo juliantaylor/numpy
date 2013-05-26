@@ -69,6 +69,16 @@ class TestBaseMath(TestCase):
                 assert_almost_equal(out, exp1, err_msg=msg)
 
 
+    def test_blocked_reduction(self):
+        """ test alignments offsets for simd instructions """
+        for dt in [np.float32, np.float64]:
+            for out, inp, msg in gen_alignment_data(dtype=dt,
+                                                           type='unary',
+                                                           max_size=12):
+                inp[...] = np.ones_like(inp)
+                self.assertAlmostEqual(inp.sum(), inp.size)
+
+
 class TestPower(TestCase):
     def test_small_types(self):
         for t in [np.int8, np.int16, np.float16]:
