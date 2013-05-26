@@ -25,6 +25,14 @@
 #include "datetime_strings.h"
 #include "array_assign.h"
 
+#ifdef HAVE_EMMINTRIN_H
+#include <emmintrin.h>
+#endif
+#ifndef NPY_BSWAP16
+#define NPY_BSWAP16(x) ((((x) >> 8) & 0xffu) | (((x) & 0xffu) << 8))
+#endif
+
+
 /*
  * Reading from a file or a string.
  *
@@ -340,10 +348,32 @@ _strided_byte_swap(void *p, npy_intp stride, npy_intp n, int size)
         }
         break;
     case 2:
-        for (a = (char*)p; n > 0; n--, a += stride) {
-            npy_uint16 * a_ = (npy_uint16 *)a;
-            *a_ = (((*a_ >> 8) & 0xffu) | ((*a_ & 0xffu) << 8));
+#ifdef HAVE_EMMINTRIN_H
+        {
+            npy_intp i = 0;
+            npy_uint16 * s = (npy_uint16 *)p;
+            if (stride == 2 && (npy_intp)s % 2 == 0) {
+                const npy_intp peel = npy_aligned_block_offset(s, 2, 16, n);
+                for (i = 0; i < peel; i++)
+                    s[i] = NPY_BSWAP16(s[i]);
+                for (; i < npy_blocked_end(peel, 2, 16, n); i += 8) {
+                    __m128i r1 = _mm_load_si128((__m128i *)&s[i]);
+                    __m128i r2 = r1;
+                    r1 = _mm_srli_epi16(r1, 8);
+                    r2 = _mm_slli_epi16(r2, 8);
+                    r1 = _mm_or_si128(r1, r2);
+                    _mm_store_si128((__m128i*)&s[i], r1);
+                }
+            }
+            for (; i < n; i++)
+                s[i] = NPY_BSWAP16(s[i]);
         }
+#else
+        for (a = (char*)p; n > 0; n--, a += stride) {
+            npy_uint16 * s = (npy_uint16 *)a;
+            *s = NPY_BSWAP16(*s);
+        }
+#endif
         break;
     default:
         m = size/2;

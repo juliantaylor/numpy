@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 from nose import SkipTest
 from numpy.core import *
-from numpy.testing.utils import WarningManager
+from numpy.testing.utils import WarningManager, gen_alignment_data
 from numpy.compat import asbytes, getexception, strchar, sixu
 from test_print import in_foreign_locale
 from numpy.core.multiarray_tests import (
@@ -3079,6 +3079,25 @@ class TestArrayPriority(TestCase):
         assert_(isinstance(res2, PriorityNdarray))
         assert_(isinstance(res3, PriorityNdarray))
         assert_(isinstance(res4, PriorityNdarray))
+
+
+class TestByteSwap(TestCase):
+    def setUp(self):
+        self.dtype = [np.int16, np.int32, np.int64]
+        self.s5 = {np.int16: 1280, np.int32: 83886080,
+                   np.int64: 360287970189639680}
+
+    def test_basics(self):
+        for dt in self.dtype:
+            for out, inp, msg in gen_alignment_data(dt, type='unary'):
+                sw = inp.byteswap()
+                inp.byteswap(True)
+                assert_equal(inp, sw)
+
+                inp.fill(5)
+                sw = zeros_like(inp) + self.s5[dt]
+                inp.byteswap(True)
+                assert_equal(inp, sw)
 
 
 if __name__ == "__main__":
