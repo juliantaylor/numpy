@@ -708,6 +708,27 @@ class TestMinMax(TestCase):
 
 
 
+class TestAbsolute(TestCase):
+    def test_abs_blocked(self):
+        "simd tests on abs"
+        for dt in [np.float32, np.float64]:
+            for out, inp, msg in gen_alignment_data(dtype=dt, type='unary',
+                                                    max_size=17):
+                exp = [ncu.absolute(i) for i in inp]
+                np.absolute(inp, out=out)
+                assert_equal(out, exp, err_msg=msg)
+                self.assertTrue((out >= 0).all())
+
+                for v in [np.nan, -np.inf, np.inf]:
+                    for i in range(inp.size):
+                        d = np.arange(inp.size, dtype=dt)
+                        inp[:] = -d
+                        inp[i] = v
+                        d[i] = -v if v == -np.inf else v
+                        assert_array_equal(np.abs(inp),  d)
+                        np.abs(inp, out=out)
+                        assert_array_equal(out,  d)
+
 
 class TestSpecialMethods(TestCase):
     def test_wrap(self):

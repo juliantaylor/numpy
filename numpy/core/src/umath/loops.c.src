@@ -1457,6 +1457,34 @@ sse2_minmax_@TYPE@_@kind@(char **args, npy_intp *dimensions,
 }
 /**end repeat1**/
 
+
+static void
+sse2_absolute_@TYPE@(char **args, npy_intp *dimensions, npy_intp *steps)
+{
+    const @vtype@ mask = _mm_set1_@VSUF@(-0.@c@);
+    UNARY_LOOP_BLOCK_ALIGN_OUT(@type@, 16) {
+        const @type@ tmp = ip1[i] > 0 ? ip1[i]: -ip1[i];
+        /* add 0 to clear -0.0 */
+        op1[i] = tmp + 0;
+    }
+    if (npy_is_aligned(&ip1[i], 16)) {
+        UNARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = _mm_load_@VSUF@(&ip1[i]);
+            _mm_store_@VSUF@(&op1[i], _mm_andnot_@VSUF@(mask, a));
+        }
+    }
+    else {
+        UNARY_LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a = _mm_loadu_@VSUF@(&ip1[i]);
+            _mm_store_@VSUF@(&op1[i], _mm_andnot_@VSUF@(mask, a));
+        }
+    }
+    UNARY_LOOP_BLOCKED_END {
+        const @type@ tmp = ip1[i] > 0 ? ip1[i]: -ip1[i];
+        /* add 0 to clear -0.0 */
+        op1[i] = tmp + 0;
+    }
+}
 /**end repeat**/
 
 #endif
@@ -1694,11 +1722,19 @@ NPY_NO_EXPORT void
 NPY_NO_EXPORT void
 @TYPE@_absolute(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
 {
-    UNARY_LOOP {
-        const @type@ in1 = *(@type@ *)ip1;
-        const @type@ tmp = in1 > 0 ? in1 : -in1;
-        /* add 0 to clear -0.0 */
-        *((@type@ *)op1) = tmp + 0;
+#if defined HAVE_EMMINTRIN_H && defined NPY_HAVE_SIMD_@TYPE@
+    if (IS_BLOCKABLE_UNARY(sizeof(@type@), 16)) {
+        sse2_absolute_@TYPE@(args, dimensions, steps);
+    }
+    else
+#endif
+    {
+        UNARY_LOOP {
+            const @type@ in1 = *(@type@ *)ip1;
+            const @type@ tmp = in1 > 0 ? in1 : -in1;
+            /* add 0 to clear -0.0 */
+            *((@type@ *)op1) = tmp + 0;
+        }
     }
 }
 
