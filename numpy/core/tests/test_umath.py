@@ -719,6 +719,8 @@ class TestAbsolute(TestCase):
                 assert_equal(out, exp, err_msg=msg)
                 self.assertTrue((out >= 0).all())
 
+                prev = np.geterr()
+                np.seterr(invalid='ignore')
                 for v in [np.nan, -np.inf, np.inf]:
                     for i in range(inp.size):
                         d = np.arange(inp.size, dtype=dt)
@@ -728,6 +730,7 @@ class TestAbsolute(TestCase):
                         assert_array_equal(np.abs(inp),  d)
                         np.abs(inp, out=out)
                         assert_array_equal(out,  d)
+                np.seterr(invalid=prev['invalid'])
 
 
 class TestSpecialMethods(TestCase):
