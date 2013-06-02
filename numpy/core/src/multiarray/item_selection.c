@@ -768,14 +768,17 @@ PyArray_Choose(PyArrayObject *ip, PyObject *op, PyArrayObject *out,
  * over all but the desired sorting axis.
  */
 static int
-_new_sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
+_new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
+              NPY_SELECTKIND pwhich, NPY_SORTKIND swhich,
+              int is_sort)
 {
     PyArrayIterObject *it;
     int needcopy = 0, swap;
     npy_intp N, size;
     int elsize;
     npy_intp astride;
-    PyArray_SortFunc *sort;
+    PyArray_PartitionFunc *part = NULL;
+    PyArray_SortFunc *sort = NULL;
     NPY_BEGIN_THREADS_DEF;
 
     it = (PyArrayIterObject *)PyArray_IterAllButAxis((PyObject *)op, &axis);
@@ -785,7 +788,12 @@ _new_sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
     }
 
     NPY_BEGIN_THREADS_DESCR(PyArray_DESCR(op));
-    sort = PyArray_DESCR(op)->f->sort[which];
+    if (is_sort) {
+        sort = PyArray_DESCR(op)->f->sort[swhich];
+    }
+    else {
+        part = PyArray_DESCR(op)->f->partition[pwhich];
+    }
     size = it->size;
     N = PyArray_DIMS(op)[axis];
     elsize = PyArray_DESCR(op)->elsize;
@@ -805,9 +813,17 @@ _new_sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
             if (swap) {
                 _strided_byte_swap(buffer, (npy_intp) elsize, N, elsize);
             }
-            if (sort(buffer, N, op) < 0) {
-                PyDataMem_FREE(buffer);
-                goto fail;
+            if (sort) {
+                if (sort(buffer, N, op) < 0) {
+                    PyDataMem_FREE(buffer);
+                    goto fail;
+                }
+            }
+            else {
+                if (part(buffer, N, kth, op) < 0) {
+                    PyDataMem_FREE(buffer);
+                    goto fail;
+                }
             }
             if (swap) {
                 _strided_byte_swap(buffer, (npy_intp) elsize, N, elsize);
@@ -820,79 +836,15 @@ _new_sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
     }
     else {
         while (size--) {
-            if (sort(it->dataptr, N, op) < 0) {
-                goto fail;
+            if (sort) {
+                if (sort(it->dataptr, N, op) < 0) {
+                    goto fail;
+                }
             }
-            PyArray_ITER_NEXT(it);
-        }
-    }
-    NPY_END_THREADS_DESCR(PyArray_DESCR(op));
-    Py_DECREF(it);
-    return 0;
-
- fail:
-    /* Out of memory during sorting or buffer creation */
-    NPY_END_THREADS;
-    PyErr_NoMemory();
-    Py_DECREF(it);
-    return -1;
-}
-
-static int
-_new_partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND which)
-{
-    PyArrayIterObject *it;
-    int needcopy = 0, swap;
-    npy_intp N, size;
-    int elsize;
-    npy_intp astride;
-    PyArray_PartitionFunc *part;
-    NPY_BEGIN_THREADS_DEF;
-
-    it = (PyArrayIterObject *)PyArray_IterAllButAxis((PyObject *)op, &axis);
-    swap = !PyArray_ISNOTSWAPPED(op);
-    if (it == NULL) {
-        return -1;
-    }
-
-    NPY_BEGIN_THREADS_DESCR(PyArray_DESCR(op));
-    part = PyArray_DESCR(op)->f->partition[which];
-    size = it->size;
-    N = PyArray_DIMS(op)[axis];
-    elsize = PyArray_DESCR(op)->elsize;
-    astride = PyArray_STRIDES(op)[axis];
-
-    needcopy = !(PyArray_FLAGS(op) & NPY_ARRAY_ALIGNED) ||
-                (astride != (npy_intp) elsize) || swap;
-    if (needcopy) {
-        char *buffer = PyDataMem_NEW(N*elsize);
-        if (buffer == NULL) {
-            goto fail;
-        }
-
-        while (size--) {
-            _unaligned_strided_byte_copy(buffer, (npy_intp) elsize, it->dataptr,
-                                         astride, N, elsize);
-            if (swap) {
-                _strided_byte_swap(buffer, (npy_intp) elsize, N, elsize);
-            }
-            if (part(buffer, N, kth, op) < 0) {
-                PyDataMem_FREE(buffer);
-                goto fail;
-            }
-            if (swap) {
-                _strided_byte_swap(buffer, (npy_intp) elsize, N, elsize);
-            }
-            _unaligned_strided_byte_copy(it->dataptr, astride, buffer,
-                                         (npy_intp) elsize, N, elsize);
-            PyArray_ITER_NEXT(it);
-        }
-        PyDataMem_FREE(buffer);
-    }
-    else {
-        while (size--) {
-            if (part(it->dataptr, N, kth, op) < 0) {
-                goto fail;
+            else {
+                if (part(it->dataptr, N, kth, op) < 0) {
+                    goto fail;
+                }
             }
             PyArray_ITER_NEXT(it);
         }
@@ -910,7 +862,9 @@ _new_partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND which)
 }
 
 static PyObject*
-_new_argsort(PyArrayObject *op, int axis, NPY_SORTKIND which)
+_new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
+                 NPY_SELECTKIND pwhich, NPY_SORTKIND swhich,
+                 int is_sort)
 {
 
     PyArrayIterObject *it = NULL;
@@ -920,7 +874,8 @@ _new_argsort(PyArrayObject *op, int axis, NPY_SORTKIND which)
     npy_intp astride, rstride, *iptr;
     int elsize;
     int needcopy = 0, swap;
-    PyArray_ArgSortFunc *argsort;
+    PyArray_ArgSortFunc *argsort = NULL;
+    PyArray_ArgPartitionFunc *argpart = NULL;
     NPY_BEGIN_THREADS_DEF;
 
     ret = (PyArrayObject *)PyArray_New(Py_TYPE(op),
@@ -939,7 +894,12 @@ _new_argsort(PyArrayObject *op, int axis, NPY_SORTKIND which)
     swap = !PyArray_ISNOTSWAPPED(op);
 
     NPY_BEGIN_THREADS_DESCR(PyArray_DESCR(op));
-    argsort = PyArray_DESCR(op)->f->argsort[which];
+    if (is_sort) {
+        argsort = PyArray_DESCR(op)->f->argsort[swhich];
+    }
+    else {
+        argpart = PyArray_DESCR(op)->f->argpartition[pwhich];
+    }
     size = it->size;
     N = PyArray_DIMS(op)[axis];
     elsize = PyArray_DESCR(op)->elsize;
@@ -971,10 +931,20 @@ _new_argsort(PyArrayObject *op, int axis, NPY_SORTKIND which)
             for (i = 0; i < N; i++) {
                 *iptr++ = i;
             }
-            if (argsort(valbuffer, (npy_intp *)indbuffer, N, op) < 0) {
-                PyDataMem_FREE(valbuffer);
-                PyDataMem_FREE(indbuffer);
-                goto fail;
+            if (argsort) {
+                if (argsort(valbuffer, (npy_intp *)indbuffer, N, op) < 0) {
+                    PyDataMem_FREE(valbuffer);
+                    PyDataMem_FREE(indbuffer);
+                    goto fail;
+                }
+            }
+            else {
+                if (argpart(valbuffer, (npy_intp *)indbuffer,
+                            N, kth, op) < 0) {
+                    PyDataMem_FREE(valbuffer);
+                    PyDataMem_FREE(indbuffer);
+                    goto fail;
+                }
             }
             _unaligned_strided_byte_copy(rit->dataptr, rstride, indbuffer,
                                          sizeof(npy_intp), N, sizeof(npy_intp));
@@ -990,8 +960,17 @@ _new_argsort(PyArrayObject *op, int axis, NPY_SORTKIND which)
             for (i = 0; i < N; i++) {
                 *iptr++ = i;
             }
-            if (argsort(it->dataptr, (npy_intp *)rit->dataptr, N, op) < 0) {
-                goto fail;
+            if (argsort) {
+                if (argsort(it->dataptr, (npy_intp *)rit->dataptr,
+                            N, op) < 0) {
+                    goto fail;
+                }
+            }
+            else {
+                if (argpart(it->dataptr, (npy_intp *)rit->dataptr,
+                            N, kth, op) < 0) {
+                    goto fail;
+                }
             }
             PyArray_ITER_NEXT(it);
             PyArray_ITER_NEXT(rit);
@@ -1015,115 +994,6 @@ _new_argsort(PyArrayObject *op, int axis, NPY_SORTKIND which)
     Py_XDECREF(rit);
     return NULL;
 }
-
-
-static PyObject*
-_new_argpartition(PyArrayObject *op, npy_intp kth, int axis,
-                  NPY_SELECTKIND which)
-{
-    PyArrayIterObject *it = NULL;
-    PyArrayIterObject *rit = NULL;
-    PyArrayObject *ret;
-    npy_intp N, size, i;
-    npy_intp astride, rstride, *iptr;
-    int elsize;
-    int needcopy = 0, swap;
-    PyArray_ArgPartitionFunc *argpart;
-    NPY_BEGIN_THREADS_DEF;
-
-    ret = (PyArrayObject *)PyArray_New(Py_TYPE(op),
-                            PyArray_NDIM(op),
-                            PyArray_DIMS(op),
-                            NPY_INTP,
-                            NULL, NULL, 0, 0, (PyObject *)op);
-    if (ret == NULL) {
-        return NULL;
-    }
-    it = (PyArrayIterObject *)PyArray_IterAllButAxis((PyObject *)op, &axis);
-    rit = (PyArrayIterObject *)PyArray_IterAllButAxis((PyObject *)ret, &axis);
-    if (rit == NULL || it == NULL) {
-        goto fail;
-    }
-    swap = !PyArray_ISNOTSWAPPED(op);
-
-    NPY_BEGIN_THREADS_DESCR(PyArray_DESCR(op));
-    argpart = PyArray_DESCR(op)->f->argpartition[which];
-    size = it->size;
-    N = PyArray_DIMS(op)[axis];
-    elsize = PyArray_DESCR(op)->elsize;
-    astride = PyArray_STRIDES(op)[axis];
-    rstride = PyArray_STRIDE(ret,axis);
-
-    needcopy = swap || !(PyArray_FLAGS(op) & NPY_ARRAY_ALIGNED) ||
-                         (astride != (npy_intp) elsize) ||
-            (rstride != sizeof(npy_intp));
-    if (needcopy) {
-        char *valbuffer, *indbuffer;
-
-        valbuffer = PyDataMem_NEW(N*elsize);
-        if (valbuffer == NULL) {
-            goto fail;
-        }
-        indbuffer = PyDataMem_NEW(N*sizeof(npy_intp));
-        if (indbuffer == NULL) {
-            PyDataMem_FREE(valbuffer);
-            goto fail;
-        }
-        while (size--) {
-            _unaligned_strided_byte_copy(valbuffer, (npy_intp) elsize, it->dataptr,
-                                         astride, N, elsize);
-            if (swap) {
-                _strided_byte_swap(valbuffer, (npy_intp) elsize, N, elsize);
-            }
-            iptr = (npy_intp *)indbuffer;
-            for (i = 0; i < N; i++) {
-                *iptr++ = i;
-            }
-            if (argpart(valbuffer, (npy_intp *)indbuffer, N, kth, op) < 0) {
-                PyDataMem_FREE(valbuffer);
-                PyDataMem_FREE(indbuffer);
-                goto fail;
-            }
-            _unaligned_strided_byte_copy(rit->dataptr, rstride, indbuffer,
-                                         sizeof(npy_intp), N, sizeof(npy_intp));
-            PyArray_ITER_NEXT(it);
-            PyArray_ITER_NEXT(rit);
-        }
-        PyDataMem_FREE(valbuffer);
-        PyDataMem_FREE(indbuffer);
-    }
-    else {
-        while (size--) {
-            iptr = (npy_intp *)rit->dataptr;
-            for (i = 0; i < N; i++) {
-                *iptr++ = i;
-            }
-            if (argpart(it->dataptr, (npy_intp *)rit->dataptr, N, kth, op) < 0) {
-                goto fail;
-            }
-            PyArray_ITER_NEXT(it);
-            PyArray_ITER_NEXT(rit);
-        }
-    }
-
-    NPY_END_THREADS_DESCR(PyArray_DESCR(op));
-
-    Py_DECREF(it);
-    Py_DECREF(rit);
-    return (PyObject *)ret;
-
- fail:
-    NPY_END_THREADS;
-    if (!PyErr_Occurred()) {
-        /* Out of memory during sorting or buffer creation */
-        PyErr_NoMemory();
-    }
-    Py_DECREF(ret);
-    Py_XDECREF(it);
-    Py_XDECREF(rit);
-    return NULL;
-}
-
 
 /* Be sure to save this global_compare when necessary */
 static PyArrayObject *global_obj;
@@ -1215,7 +1085,7 @@ PyArray_Sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
 
     /* Determine if we should use type-specific algorithm or not */
     if (PyArray_DESCR(op)->f->sort[which] != NULL) {
-        return _new_sort(op, axis, which);
+        return _new_sorttype(op, 0, axis, 0, which, 1);
     }
 
     if (PyArray_DESCR(op)->f->compare == NULL) {
@@ -1335,7 +1205,7 @@ PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
     which = 0;
     /* Determine if we should use type-specific algorithm or not */
     if (PyArray_DESCR(op)->f->partition[which] != NULL) {
-        return _new_partition(op, kth, axis, which);
+        return _new_sorttype(op, kth, axis, which, 0, 0);
     }
 
     if (PyArray_DESCR(op)->f->compare == NULL) {
@@ -1454,7 +1324,7 @@ PyArray_ArgSort(PyArrayObject *op, int axis, NPY_SORTKIND which)
     }
     /* Determine if we should use new algorithm or not */
     if (PyArray_DESCR(op2)->f->argsort[which] != NULL) {
-        ret = (PyArrayObject *)_new_argsort(op2, axis, which);
+        ret = (PyArrayObject *)_new_argsorttype(op2, 0, axis, 0, which, 1);
         Py_DECREF(op2);
         return (PyObject *)ret;
     }
@@ -1592,7 +1462,7 @@ PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND whi
 
     /* Determine if we should use new algorithm or not */
     if (PyArray_DESCR(op2)->f->argpartition[which] != NULL) {
-        ret = (PyArrayObject *)_new_argpartition(op2, kth, axis, which);
+        ret = (PyArrayObject *)_new_argsorttype(op2, kth, axis, which, 0, 0);
         Py_DECREF(op2);
         return (PyObject *)ret;
     }
