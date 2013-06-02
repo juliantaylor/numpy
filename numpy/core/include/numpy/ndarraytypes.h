@@ -499,9 +499,6 @@ typedef struct {
         PyArray_SortFunc *sort[NPY_NSORTS];
         PyArray_ArgSortFunc *argsort[NPY_NSORTS];
 
-        PyArray_PartitionFunc *partition[NPY_NSELECTS];
-        PyArray_ArgPartitionFunc *argpartition[NPY_NSELECTS];
-
         /*
          * Dictionary of additional casting functions
          * PyArray_VectorUnaryFuncs
@@ -528,6 +525,13 @@ typedef struct {
          * Can be NULL
          */
         PyArray_ArgFunc *argmin;
+
+        /*
+         * Partition function based on selection
+         * Can be NULL
+         */
+        PyArray_PartitionFunc *partition[NPY_NSELECTS];
+        PyArray_ArgPartitionFunc *argpartition[NPY_NSELECTS];
 
 } PyArray_ArrFuncs;
 

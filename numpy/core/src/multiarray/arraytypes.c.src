@@ -3642,24 +3642,12 @@ static PyArray_ArrFuncs _Py@NAME@_ArrFuncs = {
         (PyArray_ArgSortFunc *)aheapsort_@suff@,
         (PyArray_ArgSortFunc *)amergesort_@suff@
     },
-    {
-        (PyArray_PartitionFunc *)quickselect_@suff@,
-    },
-    {
-        (PyArray_ArgPartitionFunc *)aquickselect_@suff@
-    },
 #else
     {
         NULL, NULL, NULL
     },
     {
         NULL, NULL, NULL
-    },
-    {
-        NULL
-    },
-    {
-        NULL
     },
 #endif
     NULL,
@@ -3669,7 +3657,22 @@ static PyArray_ArrFuncs _Py@NAME@_ArrFuncs = {
     (PyArray_FastClipFunc *)NULL,
     (PyArray_FastPutmaskFunc *)NULL,
     (PyArray_FastTakeFunc *)NULL,
-    (PyArray_ArgFunc*)@from@_argmin
+    (PyArray_ArgFunc*)@from@_argmin,
+#if @sort@
+    {
+        (PyArray_PartitionFunc *)quickselect_@suff@,
+    },
+    {
+        (PyArray_ArgPartitionFunc *)aquickselect_@suff@
+    },
+#else
+    {
+        NULL
+    },
+    {
+        NULL
+    },
+#endif
 };
 
 /*
@@ -3794,24 +3797,12 @@ static PyArray_ArrFuncs _Py@NAME@_ArrFuncs = {
         (PyArray_ArgSortFunc *)aheapsort_@suff@,
         (PyArray_ArgSortFunc *)amergesort_@suff@
     },
-    {
-        (PyArray_PartitionFunc *)quickselect_@suff@
-    },
-    {
-        (PyArray_ArgPartitionFunc *)aquickselect_@suff@
-    },
 #else
     {
         NULL, NULL, NULL
     },
     {
         NULL, NULL, NULL
-    },
-    {
-        NULL
-    },
-    {
-        NULL
     },
 #endif
     NULL,
@@ -3821,7 +3812,22 @@ static PyArray_ArrFuncs _Py@NAME@_ArrFuncs = {
     (PyArray_FastClipFunc*)@from@_fastclip,
     (PyArray_FastPutmaskFunc*)@from@_fastputmask,
     (PyArray_FastTakeFunc*)@from@_fasttake,
-    (PyArray_ArgFunc*)@from@_argmin
+    (PyArray_ArgFunc*)@from@_argmin,
+#if @sort@
+    {
+        (PyArray_PartitionFunc *)quickselect_@suff@
+    },
+    {
+        (PyArray_ArgPartitionFunc *)aquickselect_@suff@
+    },
+#else
+    {
+        NULL
+    },
+    {
+        NULL
+    },
+#endif
 };
 
 /*

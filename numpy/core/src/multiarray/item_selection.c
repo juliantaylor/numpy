@@ -839,7 +839,7 @@ _new_sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
 }
 
 static int
-_new_partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
+_new_partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND which)
 {
     PyArrayIterObject *it;
     int needcopy = 0, swap;
@@ -1018,7 +1018,8 @@ _new_argsort(PyArrayObject *op, int axis, NPY_SORTKIND which)
 
 
 static PyObject*
-_new_argpartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
+_new_argpartition(PyArrayObject *op, npy_intp kth, int axis,
+                  NPY_SELECTKIND which)
 {
     PyArrayIterObject *it = NULL;
     PyArrayIterObject *rit = NULL;
