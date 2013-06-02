@@ -3047,12 +3047,9 @@ add_newdoc('numpy.core.multiarray', 'ndarray', ('argsort',
 
 add_newdoc('numpy.core.multiarray', 'ndarray', ('argpartition',
     """
-    a.argsort(kth, axis=-1, kind='quickselect', order=None)
+    a.argpartition(kth, axis=-1, kind='quickselect', order=None)
 
     Returns the indices that would partition this array.
-    A partition sorts the kth element into its sorted order and moves all
-    smaller elements before the kth element and all larger elements behind it.
-    The ordering of all elements in the partitions is undefined.
 
     Refer to `numpy.argpartition` for full documentation.
 
@@ -4223,10 +4220,11 @@ add_newdoc('numpy.core.multiarray', 'ndarray', ('partition',
     """
     a.partition(kth, axis=-1, kind='quickselect', order=None)
 
-    Partition an array, in-place.
-    A partition sorts the kth element into its sorted order and moves all
-    smaller elements before the kth element and all larger elements behind it.
-    The ordering of all elements in the partitions is undefined.
+    Rearranges the elements in the array in such a way that the element in kth
+    position is in the position it would be in a sorted array. All elements
+    smaller than the kth element are moved before this element and all greater
+    elements are moved behind it. The ordering of the elements in the two
+    partitions is undefined.
 
     Parameters
     ----------

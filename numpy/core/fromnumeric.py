@@ -538,9 +538,12 @@ def transpose(a, axes=None):
 def partition(a, kth, axis=-1):
     """
     Return a partitioned copy of an array.
-    A partition sorts the kth element into its sorted order and moves all
-    smaller elements before the kth element and all larger elements behind it.
-    The ordering of all elements in the partitions is undefined.
+
+    Rearranges the elements in the array in such a way that the element in kth
+    position is in the position it would be in a sorted array. All elements
+    smaller than the kth element are moved before this element and all greater
+    elements are moved behind it. The ordering of the elements in the two
+    partitions is undefined.
 
     Parameters
     ----------
@@ -610,13 +613,9 @@ def partition(a, kth, axis=-1):
     a.partition(kth, axis=axis)
     return a
 
+
 def argpartition(a, kth, axis=-1):
     """
-    Returns the indices that would partition an array.
-    A partition sorts the kth element into its sorted order and moves all
-    smaller elements before the kth element and all larger elements behind it.
-    The ordering of all elements in the partitions is undefined.
-
     Perform an indirect partition along the given axis using the algorithm
     specified by the `kind` keyword. It returns an array of indices of the
     same shape as `a` that index data along the given axis in partitioned
@@ -666,6 +665,7 @@ def argpartition(a, kth, axis=-1):
 
     """
     return a.argpartition(kth, axis)
+
 
 def sort(a, axis=-1, kind='quicksort', order=None):
     """
