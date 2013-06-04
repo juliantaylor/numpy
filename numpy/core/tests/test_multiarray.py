@@ -885,135 +885,159 @@ class TestMethods(TestCase):
 
 
     def test_partition(self):
-        #d = np.array([])
-        #assert_array_equal(np.partition(d, 0), d)
-        d = np.ones((1))
-        assert_array_equal(np.partition(d, 0)[0], d)
-        assert_array_equal(d[np.argpartition(d, 0)], np.partition(d, 0))
-        d = np.array([1, 2])
-        assert_array_equal(np.partition(d, 0)[0], 1)
-        assert_array_equal(np.partition(d, 1)[1], 2)
-        assert_array_equal(d[np.argpartition(d, 0)], np.partition(d, 0))
-        assert_array_equal(d[np.argpartition(d, 1)], np.partition(d, 1))
-        d = np.array([2, 1])
-        assert_array_equal(np.partition(d, 0)[0], 1)
-        assert_array_equal(np.partition(d, 1)[1], 2)
-        assert_array_equal(d[np.argpartition(d, 0)], np.partition(d, 0))
-        assert_array_equal(d[np.argpartition(d, 1)], np.partition(d, 1))
-        for r in ([3, 2, 1], [1, 2, 3], [2, 1, 3], [2, 3, 1]):
-            d = np.array(r)
-            assert_array_equal(np.partition(d, 0)[0], 1)
-            assert_array_equal(np.partition(d, 1)[1], 2)
-            assert_array_equal(np.partition(d, 2)[2], 3)
-            assert_array_equal(d[np.argpartition(d, 0)], np.partition(d, 0))
-            assert_array_equal(d[np.argpartition(d, 1)], np.partition(d, 1))
-            assert_array_equal(d[np.argpartition(d, 2)], np.partition(d, 2))
+        d = np.arange(10)
+        assert_raises(ValueError, np.partition, d, 2, kind="nonsense")
+        assert_raises(ValueError, np.argpartition, d, 2, kind="nonsense")
+        assert_raises(ValueError, d.partition, 2, axis=0, kind="nonsense")
+        assert_raises(ValueError, d.argpartition, 2, axis=0, kind="nonsense")
+        for k in ("medianofmedian5", "quickselect"):
+            d = np.array([])
+            assert_array_equal(np.partition(d, 0, kind=k), d)
+            assert_array_equal(np.argpartition(d, 0, kind=k), d)
+            d = np.ones((1))
+            assert_array_equal(np.partition(d, 0, kind=k)[0], d)
+            assert_array_equal(d[np.argpartition(d, 0, kind=k)],
+                               np.partition(d, 0, kind=k))
+            d = np.array([1, 2])
+            assert_array_equal(np.partition(d, 0, kind=k)[0], 1)
+            assert_array_equal(np.partition(d, 1, kind=k)[1], 2)
+            assert_array_equal(d[np.argpartition(d, 0, kind=k)],
+                               np.partition(d, 0, kind=k))
+            assert_array_equal(d[np.argpartition(d, 1, kind=k)],
+                               np.partition(d, 1, kind=k))
+            d = np.array([2, 1])
+            assert_array_equal(np.partition(d, 0, kind=k)[0], 1)
+            assert_array_equal(np.partition(d, 1, kind=k)[1], 2)
+            assert_array_equal(d[np.argpartition(d, 0, kind=k)],
+                               np.partition(d, 0, kind=k))
+            assert_array_equal(d[np.argpartition(d, 1, kind=k)],
+                               np.partition(d, 1, kind=k))
+            for r in ([3, 2, 1], [1, 2, 3], [2, 1, 3], [2, 3, 1]):
+                d = np.array(r)
+                assert_array_equal(np.partition(d, 0, kind=k)[0], 1)
+                assert_array_equal(np.partition(d, 1, kind=k)[1], 2)
+                assert_array_equal(np.partition(d, 2, kind=k)[2], 3)
+                assert_array_equal(d[np.argpartition(d, 0, kind=k)],
+                                   np.partition(d, 0, kind=k))
+                assert_array_equal(d[np.argpartition(d, 1, kind=k)],
+                                   np.partition(d, 1, kind=k))
+                assert_array_equal(d[np.argpartition(d, 2, kind=k)],
+                                   np.partition(d, 2, kind=k))
 
-        d = np.ones((50))
-        assert_array_equal(np.partition(d, 0), d)
-        assert_array_equal(d[np.argpartition(d, 0)], np.partition(d, 0))
+            d = np.ones((50))
+            assert_array_equal(np.partition(d, 0, kind=k), d)
+            assert_array_equal(d[np.argpartition(d, 0, kind=k)],
+                               np.partition(d, 0, kind=k))
 
-        # sorted
-        d = np.arange((49))
-        self.assertEqual(np.partition(d, 5)[5], 5)
-        self.assertEqual(np.partition(d, 15)[15], 15)
-        assert_array_equal(d[np.argpartition(d, 5)], np.partition(d, 5))
-        assert_array_equal(d[np.argpartition(d, 15)], np.partition(d, 15))
+            # sorted
+            d = np.arange((49))
+            self.assertEqual(np.partition(d, 5, kind=k)[5], 5)
+            self.assertEqual(np.partition(d, 15, kind=k)[15], 15)
+            assert_array_equal(d[np.argpartition(d, 5, kind=k)],
+                               np.partition(d, 5, kind=k))
+            assert_array_equal(d[np.argpartition(d, 15, kind=k)],
+                               np.partition(d, 15, kind=k))
 
-        # rsorted
-        d = np.arange((47))[::-1]
-        self.assertEqual(np.partition(d, 6)[6], 6)
-        self.assertEqual(np.partition(d, 16)[16], 16)
-        assert_array_equal(d[np.argpartition(d, 6)], np.partition(d, 6))
-        assert_array_equal(d[np.argpartition(d, 16)], np.partition(d, 16))
+            # rsorted
+            d = np.arange((47))[::-1]
+            self.assertEqual(np.partition(d, 6, kind=k)[6], 6)
+            self.assertEqual(np.partition(d, 16, kind=k)[16], 16)
+            assert_array_equal(d[np.argpartition(d, 6, kind=k)],
+                               np.partition(d, 6, kind=k))
+            assert_array_equal(d[np.argpartition(d, 16, kind=k)],
+                               np.partition(d, 16, kind=k))
 
-        assert_array_equal(np.partition(d, -6), np.partition(d, 41))
-        assert_array_equal(np.partition(d, -16), np.partition(d, 31))
-        assert_array_equal(d[np.argpartition(d, -6)], np.partition(d, 41))
+            assert_array_equal(np.partition(d, -6, kind=k),
+                               np.partition(d, 41, kind=k))
+            assert_array_equal(np.partition(d, -16, kind=k),
+                               np.partition(d, 31, kind=k))
+            assert_array_equal(d[np.argpartition(d, -6, kind=k)],
+                               np.partition(d, 41, kind=k))
 
-        d = np.array([2, 1])
-        d.partition(0)
-        assert_raises(ValueError, d.partition, 2)
-        assert_raises(ValueError, d.partition, 3, axis=1)
-        assert_raises(ValueError, np.partition, d, 2)
-        assert_raises(ValueError, np.partition, d, 2, axis=1)
-        assert_raises(ValueError, d.argpartition, 2)
-        assert_raises(ValueError, d.argpartition, 3, axis=1)
-        assert_raises(ValueError, np.argpartition, d, 2)
-        assert_raises(ValueError, np.argpartition, d, 2, axis=1)
-        d = np.arange(10).reshape((2, 5))
-        d.partition(1, axis=0)
-        d.partition(4, axis=1)
-        np.partition(d, 1, axis=0)
-        np.partition(d, 4, axis=1)
-        np.partition(d, 1, axis=None)
-        np.partition(d, 9, axis=None)
-        d.argpartition(1, axis=0)
-        d.argpartition(4, axis=1)
-        np.argpartition(d, 1, axis=0)
-        np.argpartition(d, 4, axis=1)
-        np.argpartition(d, 1, axis=None)
-        np.argpartition(d, 9, axis=None)
-        assert_raises(ValueError, d.partition, 2, axis=0)
-        assert_raises(ValueError, d.partition, 11, axis=1)
-        assert_raises(TypeError, d.partition, 2, axis=None)
-        assert_raises(ValueError, np.partition, d, 9, axis=1)
-        assert_raises(ValueError, np.partition, d, 11, axis=None)
-        assert_raises(ValueError, d.argpartition, 2, axis=0)
-        assert_raises(ValueError, d.argpartition, 11, axis=1)
-        assert_raises(ValueError, np.argpartition, d, 9, axis=1)
-        assert_raises(ValueError, np.argpartition, d, 11, axis=None)
+            d = np.array([2, 1])
+            d.partition(0, kind=k)
+            assert_raises(ValueError, d.partition, 2)
+            assert_raises(ValueError, d.partition, 3, axis=1)
+            assert_raises(ValueError, np.partition, d, 2)
+            assert_raises(ValueError, np.partition, d, 2, axis=1)
+            assert_raises(ValueError, d.argpartition, 2)
+            assert_raises(ValueError, d.argpartition, 3, axis=1)
+            assert_raises(ValueError, np.argpartition, d, 2)
+            assert_raises(ValueError, np.argpartition, d, 2, axis=1)
+            d = np.arange(10).reshape((2, 5))
+            d.partition(1, axis=0, kind=k)
+            d.partition(4, axis=1, kind=k)
+            np.partition(d, 1, axis=0, kind=k)
+            np.partition(d, 4, axis=1, kind=k)
+            np.partition(d, 1, axis=None, kind=k)
+            np.partition(d, 9, axis=None, kind=k)
+            d.argpartition(1, axis=0, kind=k)
+            d.argpartition(4, axis=1, kind=k)
+            np.argpartition(d, 1, axis=0, kind=k)
+            np.argpartition(d, 4, axis=1, kind=k)
+            np.argpartition(d, 1, axis=None, kind=k)
+            np.argpartition(d, 9, axis=None, kind=k)
+            assert_raises(ValueError, d.partition, 2, axis=0)
+            assert_raises(ValueError, d.partition, 11, axis=1)
+            assert_raises(TypeError, d.partition, 2, axis=None)
+            assert_raises(ValueError, np.partition, d, 9, axis=1)
+            assert_raises(ValueError, np.partition, d, 11, axis=None)
+            assert_raises(ValueError, d.argpartition, 2, axis=0)
+            assert_raises(ValueError, d.argpartition, 11, axis=1)
+            assert_raises(ValueError, np.argpartition, d, 9, axis=1)
+            assert_raises(ValueError, np.argpartition, d, 11, axis=None)
 
-        for dt in [np.int32, np.float32, np.complex64]:
-            for s in (9, 16):
+            td = [(dt, s) for dt in [np.int32, np.float32, np.complex64]
+                          for s in (9, 16)]
+            for dt, s in td:
+                aae = assert_array_equal
+                at = self.assertTrue
+
                 d = np.arange(s, dtype=dt)
                 np.random.shuffle(d)
                 d1 = np.tile(np.arange(s, dtype=dt), (4, 1))
                 map(np.random.shuffle, d1)
                 d0 = np.transpose(d1)
                 for i in range(d.size):
-                    p = np.partition(d, i)
+                    p = np.partition(d, i, kind=k)
                     self.assertEqual(p[i], i)
                     # all before are smaller
                     assert_array_less(p[:i], p[i])
                     # all after are larger
                     assert_array_less(p[i], p[i + 1:])
-                    assert_array_equal(p, d[np.argpartition(d, i)])
+                    aae(p, d[np.argpartition(d, i, kind=k)])
 
-                    p = np.partition(d1, i, axis=1)
-                    assert_array_equal(p[:,i], np.array([i] * d1.shape[0],
-                                                        dtype=dt))
+                    p = np.partition(d1, i, axis=1, kind=k)
+                    aae(p[:,i], np.array([i] * d1.shape[0], dtype=dt))
                     # array_less does not seem to work right
-                    self.assertTrue((p[:, :i].T <= p[:, i]).all(),
-                                    msg="%d: %r <= %r" % (i, p[:, i], p[:, :i].T))
-                    self.assertTrue((p[:, i + 1:].T > p[:, i]).all(),
-                                    msg="%d: %r < %r" % (i, p[:, i],
-                                                         p[:, i + 1:].T))
-                    assert_array_equal(p, d1[np.arange(d1.shape[0])[:,None],
-                                             np.argpartition(d1, i, axis=1)])
+                    at((p[:, :i].T <= p[:, i]).all(),
+                       msg="%d: %r <= %r" % (i, p[:, i], p[:, :i].T))
+                    at((p[:, i + 1:].T > p[:, i]).all(),
+                       msg="%d: %r < %r" % (i, p[:, i], p[:, i + 1:].T))
+                    aae(p, d1[np.arange(d1.shape[0])[:,None],
+                        np.argpartition(d1, i, axis=1, kind=k)])
 
-                    p = np.partition(d0, i, axis=0)
-                    assert_array_equal(p[i, :], np.array([i] * d1.shape[0],
+                    p = np.partition(d0, i, axis=0, kind=k)
+                    aae(p[i, :], np.array([i] * d1.shape[0],
                                                          dtype=dt))
                     # array_less does not seem to work right
-                    self.assertTrue((p[:i, :] <= p[i, :]).all(),
-                                    msg="%d: %r <= %r" % (i, p[i, :], p[:i, :]))
-                    self.assertTrue((p[i + 1:, :] > p[i, :]).all(),
-                                    msg="%d: %r < %r" % (i, p[i, :],
-                                                         p[:, i + 1:]))
-                    assert_array_equal(p, d0[np.argpartition(d0, i, axis=0),
-                                             np.arange(d0.shape[1])[None,:]])
+                    at((p[:i, :] <= p[i, :]).all(),
+                       msg="%d: %r <= %r" % (i, p[i, :], p[:i, :]))
+                    at((p[i + 1:, :] > p[i, :]).all(),
+                       msg="%d: %r < %r" % (i, p[i, :], p[:, i + 1:]))
+                    aae(p, d0[np.argpartition(d0, i, axis=0, kind=k),
+                        np.arange(d0.shape[1])[None,:]])
 
                     # check inplace
                     dc = d.copy()
-                    dc.partition(i)
-                    assert_equal(dc, np.partition(d, i))
+                    dc.partition(i, kind=k)
+                    assert_equal(dc, np.partition(d, i, kind=k))
                     dc = d0.copy()
-                    dc.partition(i, axis=0)
-                    assert_equal(dc, np.partition(d0, i, axis=0))
+                    dc.partition(i, axis=0, kind=k)
+                    assert_equal(dc, np.partition(d0, i, axis=0, kind=k))
                     dc = d1.copy()
-                    dc.partition(i, axis=1)
-                    assert_equal(dc, np.partition(d1, i, axis=1))
+                    dc.partition(i, axis=1, kind=k)
+                    assert_equal(dc, np.partition(d1, i, axis=1, kind=k))
 
 
     def test_flatten(self):

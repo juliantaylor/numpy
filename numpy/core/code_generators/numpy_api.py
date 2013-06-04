@@ -338,6 +338,7 @@ multiarray_funcs_api = {
     # End 1.7 API
     'PyArray_Partition':                    296,
     'PyArray_ArgPartition':                 297,
+    'PyArray_SelectkindConverter':          298,
 }
 
 ufunc_types_api = {

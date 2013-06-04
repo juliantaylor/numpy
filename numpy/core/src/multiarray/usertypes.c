@@ -114,10 +114,6 @@ PyArray_InitArrFuncs(PyArray_ArrFuncs *f)
         f->sort[i] = NULL;
         f->argsort[i] = NULL;
     }
-    for(i = 0; i < NPY_NSELECTS; i++) {
-        f->partition[i] = NULL;
-        f->argpartition[i] = NULL;
-    }
     f->castdict = NULL;
     f->scalarkind = NULL;
     f->cancastscalarkindto = NULL;

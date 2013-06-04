@@ -402,6 +402,48 @@ PyArray_SortkindConverter(PyObject *obj, NPY_SORTKIND *sortkind)
 }
 
 /*NUMPY_API
+ * Convert object to select kind
+ */
+NPY_NO_EXPORT int
+PyArray_SelectkindConverter(PyObject *obj, NPY_SELECTKIND *selectkind)
+{
+    char *str;
+    PyObject *tmp = NULL;
+
+    if (PyUnicode_Check(obj)) {
+        obj = tmp = PyUnicode_AsASCIIString(obj);
+    }
+
+    *selectkind = NPY_QUICKSELECT;
+    str = PyBytes_AsString(obj);
+    if (!str) {
+        Py_XDECREF(tmp);
+        return NPY_FAIL;
+    }
+    if (strlen(str) < 1) {
+        PyErr_SetString(PyExc_ValueError,
+                        "Select kind string must be at least length 1");
+        Py_XDECREF(tmp);
+        return NPY_FAIL;
+    }
+    if (strcmp(str, "quickselect") == 0) {
+        *selectkind = NPY_QUICKSELECT;
+    }
+    else if (strcmp(str, "medianofmedian5") == 0) {
+        *selectkind = NPY_MEDOFMED5;
+    }
+    else {
+        PyErr_Format(PyExc_ValueError,
+                     "%s is an unrecognized kind of select",
+                     str);
+        Py_XDECREF(tmp);
+        return NPY_FAIL;
+    }
+    Py_XDECREF(tmp);
+    return NPY_SUCCEED;
+}
+
+/*NUMPY_API
  * Convert object to searchsorted side
  */
 NPY_NO_EXPORT int

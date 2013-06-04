@@ -13,9 +13,9 @@
 
 #define NPY_NO_DEPRECATED_API NPY_API_VERSION
 
-#include <stdlib.h>
 #include "npy_sort.h"
 #include "npysort_common.h"
+#include <stdlib.h>
 
 #define NOT_USED NPY_UNUSED(unused)
 
@@ -41,6 +41,10 @@
  *         npy_cdouble, npy_clongdouble#
  */
 
+
+/*
+ * quickselect using 3-median as pivot, worst case O(n^2)
+ */
 int
 quickselect_@suff@(@type@ *v, npy_intp num, npy_intp kth,
                    void *NOT_USED)
@@ -83,7 +87,109 @@ quickselect_@suff@(@type@ *v, npy_intp num, npy_intp kth,
         @TYPE@_SWAP(v[low], v[hh])
 
         if (hh >= kth)
-            high = hh - 1; 
+            high = hh - 1;
+        if (hh <= kth)
+            low = ll;
+    }
+
+    if (high == low + 1)
+        if (@TYPE@_LT(v[high], v[low]))
+            @TYPE@_SWAP(v[high], v[low]);
+
+    return 0;
+}
+
+
+/* select index of median of five elements */
+static npy_intp median5_@suff@(@type@ * v)
+{
+    /* could be optimized as we don't need to swap */
+    if (@TYPE@_LT(v[1], v[0])) {
+        @TYPE@_SWAP(v[1], v[0]);
+    }
+    if (@TYPE@_LT(v[4], v[3])) {
+        @TYPE@_SWAP(v[4], v[3]);
+    }
+    if (@TYPE@_LT(v[3], v[0])) {
+        @TYPE@_SWAP(v[3], v[0]);
+    }
+    if (@TYPE@_LT(v[4], v[1])) {
+        @TYPE@_SWAP(v[4], v[1]);
+    }
+    if (@TYPE@_LT(v[2], v[1])) {
+        @TYPE@_SWAP(v[2], v[1]);
+    }
+    if (@TYPE@_LT(v[3], v[2])) {
+        @TYPE@_SWAP(v[3], v[2]);
+    }
+    if (@TYPE@_LT(v[2], v[1])) {
+        return 1;
+    }
+    else {
+        return 2;
+    }
+}
+
+
+int
+quickselect_mom_@suff@(@type@ *v, npy_intp num, npy_intp kth,
+                       void *NOT_USED);
+static npy_intp
+median_of_median5_@suff@(@type@ *v, const npy_intp num)
+{
+    npy_intp i;
+    npy_intp right = num - 1;
+    npy_intp nmed = (right + 1) / 5;
+    npy_intp subleft = 0;
+    for (i = 0; i < nmed; i++) {
+        npy_intp m = median5_@suff@(v + subleft);
+        @TYPE@_SWAP(v[subleft + m], v[i]);
+        subleft += 5;
+    }
+
+    if (nmed > 2)
+        quickselect_mom_@suff@(v, nmed, nmed / 2, NULL);
+    return nmed / 2;
+}
+
+
+/*
+ * quickselect using median of 5-median as pivot, worst case O(n)
+ */
+int
+quickselect_mom_@suff@(@type@ *v, npy_intp num, npy_intp kth,
+                       void *NOT_USED)
+{
+    npy_intp low  = 0;
+    npy_intp high = num - 1;
+
+    for (;low + 1 < high;) {
+        npy_intp       ll = low;
+        npy_intp       hh = high + 1;
+        const npy_intp mid = ll + median_of_median5_@suff@(v + ll, hh - ll);
+
+        @TYPE@_SWAP(v[mid], v[low]);
+
+        /*
+         * find place to put pivot (in low):
+         * pivot [x x x]
+         */
+        const @type@ t = v[low];
+        for (;;) {
+            do ll++; while (ll < num && @TYPE@_LT(v[ll], t));
+            do hh--; while (@TYPE@_LT(t, v[hh]));
+
+            if (hh < ll)
+                break;
+
+            @TYPE@_SWAP(v[ll], v[hh])
+        }
+
+        /* move pivot into position */
+        @TYPE@_SWAP(v[low], v[hh])
+
+        if (hh >= kth)
+            high = hh - 1;
         if (hh <= kth)
             low = ll;
     }
@@ -124,7 +230,7 @@ aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, npy_intp kth, voi
          */
         const @type@ t = v[tosort[low]];
         for (;;) {
-            do ll++; while (@TYPE@_LT(v[tosort[ll]], t));
+            do ll++; while (ll < num && @TYPE@_LT(v[tosort[ll]], t));
             do hh--; while (@TYPE@_LT(t, v[tosort[hh]]));
 
             if (hh < ll)
@@ -137,7 +243,111 @@ aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, npy_intp kth, voi
         INTP_SWAP(tosort[low], tosort[hh])
 
         if (hh >= kth)
-            high = hh - 1; 
+            high = hh - 1;
+        if (hh <= kth)
+            low = ll;
+    }
+
+    if (high == low + 1)
+        if (@TYPE@_LT(v[tosort[high]], v[tosort[low]]))
+            INTP_SWAP(tosort[high], tosort[low]);
+
+    return 0;
+}
+
+
+/* select index of median of five elements */
+static npy_intp amedian5_@suff@(const @type@ * v, npy_intp * tosort)
+{
+    /* could be optimized as we don't need to swap */
+    if (@TYPE@_LT(v[tosort[1]], v[tosort[0]])) {
+        INTP_SWAP(tosort[1], tosort[0]);
+    }
+    if (@TYPE@_LT(v[tosort[4]], v[tosort[3]])) {
+        INTP_SWAP(tosort[4], tosort[3]);
+    }
+    if (@TYPE@_LT(v[tosort[3]], v[tosort[0]])) {
+        INTP_SWAP(tosort[3], tosort[0]);
+    }
+    if (@TYPE@_LT(v[tosort[4]], v[tosort[1]])) {
+        INTP_SWAP(tosort[4], tosort[1]);
+    }
+    if (@TYPE@_LT(v[tosort[2]], v[tosort[1]])) {
+        INTP_SWAP(tosort[2], tosort[1]);
+    }
+    if (@TYPE@_LT(v[tosort[3]], v[tosort[2]])) {
+        INTP_SWAP(tosort[3], tosort[2]);
+    }
+    if (@TYPE@_LT(v[tosort[2]], v[tosort[1]])) {
+        return 1;
+    }
+    else {
+        return 2;
+    }
+}
+
+int
+aquickselect_mom_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
+                        npy_intp kth, void *NOT_USED);
+
+static npy_intp
+amedian_of_median5_@suff@(@type@ *v, npy_intp* tosort, const npy_intp num)
+{
+    npy_intp i;
+    npy_intp right = num - 1;
+    npy_intp nmed = (right + 1) / 5;
+    npy_intp subleft = 0;
+    for (i = 0; i < nmed; i++) {
+        npy_intp m = amedian5_@suff@(v, tosort + subleft);
+        INTP_SWAP(tosort[subleft + m], tosort[i]);
+        subleft += 5;
+    }
+
+    if (nmed > 2)
+        aquickselect_mom_@suff@(v, tosort, nmed, nmed / 2, NULL);
+    return nmed / 2;
+}
+
+
+/*
+ * quickselect using median of 5-median as pivot, worst case O(n)
+ */
+int
+aquickselect_mom_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
+                        npy_intp kth, void *NOT_USED)
+{
+    npy_intp low  = 0;
+    npy_intp high = num - 1;
+
+    for (;low + 1 < high;) {
+        npy_intp       ll = low;
+        npy_intp       hh = high + 1;
+        const npy_intp mid = ll + amedian_of_median5_@suff@(v,
+                                                            tosort + ll,
+                                                            hh - ll);
+
+        INTP_SWAP(tosort[mid], tosort[low]);
+
+        /*
+         * find place to put pivot (in low):
+         * pivot [x x x]
+         */
+        const @type@ t = v[tosort[low]];
+        for (;;) {
+            do ll++; while (ll < num && @TYPE@_LT(v[tosort[ll]], t));
+            do hh--; while (@TYPE@_LT(t, v[tosort[hh]]));
+
+            if (hh < ll)
+                break;
+
+            INTP_SWAP(tosort[ll], tosort[hh])
+        }
+
+        /* move pivot into position */
+        INTP_SWAP(tosort[low], tosort[hh])
+
+        if (hh >= kth)
+            high = hh - 1;
         if (hh <= kth)
             low = ll;
     }

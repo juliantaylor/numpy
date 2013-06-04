@@ -20,6 +20,7 @@
 
 #include "item_selection.h"
 #include "npy_sort.h"
+#include "npy_partition.h"
 
 /*NUMPY_API
  * Take
@@ -792,7 +793,7 @@ _new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
         sort = PyArray_DESCR(op)->f->sort[swhich];
     }
     else {
-        part = PyArray_DESCR(op)->f->partition[pwhich];
+        part = get_partition_func(PyArray_TYPE(op), pwhich);
     }
     size = it->size;
     N = PyArray_DIMS(op)[axis];
@@ -898,7 +899,7 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
         argsort = PyArray_DESCR(op)->f->argsort[swhich];
     }
     else {
-        argpart = PyArray_DESCR(op)->f->argpartition[pwhich];
+        argpart = get_argpartition_func(PyArray_TYPE(op), pwhich);
     }
     size = it->size;
     N = PyArray_DIMS(op)[axis];
@@ -1167,7 +1168,7 @@ PyArray_Sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
  * Partition an array in-place
  */
 NPY_NO_EXPORT int
-PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
+PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND which)
 {
     PyArrayObject *ap = NULL, *store_arr = NULL;
     char *ip;
@@ -1192,7 +1193,7 @@ PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
     if (kth < 0) {
         kth += shape[axis];
     }
-    if ((kth < 0) || (kth >= shape[axis])) {
+    if (PyArray_SIZE(op) != 0 && ((kth < 0) || (kth >= shape[axis]))) {
         PyErr_Format(PyExc_ValueError, "kth(=%zd) out of bounds (%zd)",
                      kth, shape[axis]);
         return -1;
@@ -1202,9 +1203,8 @@ PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
     }
 
     /* FIXME */
-    which = 0;
     /* Determine if we should use type-specific algorithm or not */
-    if (PyArray_DESCR(op)->f->partition[which] != NULL) {
+    if (get_partition_func(PyArray_TYPE(op), which) != NULL) {
         return _new_sorttype(op, kth, axis, which, 0, 0);
     }
 
@@ -1422,7 +1422,7 @@ PyArray_ArgSort(PyArrayObject *op, int axis, NPY_SORTKIND which)
  * ArgPartition an array
  */
 NPY_NO_EXPORT PyObject *
-PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND which)
+PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND which)
 {
     PyArrayObject *ap = NULL, *ret = NULL, *store, *op2;
     npy_intp *ip;
@@ -1454,14 +1454,14 @@ PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SORTKIND whi
     if (kth < 0) {
         kth += shape[axis];
     }
-    if ((kth < 0) || (kth >= shape[axis])) {
+    if (PyArray_SIZE(op2) != 0 && ((kth < 0) || (kth >= shape[axis]))) {
         PyErr_Format(PyExc_ValueError, "kth(=%zd) out of bounds (%zd)",
                      kth, shape[axis]);
         return NULL;
     }
 
     /* Determine if we should use new algorithm or not */
-    if (PyArray_DESCR(op2)->f->argpartition[which] != NULL) {
+    if (get_argpartition_func(PyArray_TYPE(op), which) != NULL) {
         ret = (PyArrayObject *)_new_argsorttype(op2, kth, axis, which, 0, 0);
         Py_DECREF(op2);
         return (PyObject *)ret;

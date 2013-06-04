@@ -4236,8 +4236,8 @@ add_newdoc('numpy.core.multiarray', 'ndarray', ('partition',
     axis : int, optional
         Axis along which to sort. Default is -1, which means sort along the
         last axis.
-    kind : {'quickselect'}, optional
-        Sorting algorithm. Default is 'quickselect'.
+    kind : {'quickselect', 'medianofmedian5'}, optional
+        Selection algorithm. Default is 'quickselect'.
     order : list, optional
         When `a` is an array with fields defined, this argument specifies
         which fields to compare first, second, etc.  Not all fields need be
@@ -4250,7 +4250,7 @@ add_newdoc('numpy.core.multiarray', 'ndarray', ('partition',
 
     Notes
     -----
-    See ``partition`` for notes on the different algorithms.
+    See ``np.partition`` for notes on the different algorithms.
 
     Examples
     --------

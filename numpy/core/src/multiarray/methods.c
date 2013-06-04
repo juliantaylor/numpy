@@ -1175,7 +1175,7 @@ array_partition(PyArrayObject *self, PyObject *args, PyObject *kwds)
     int axis=-1;
     int val;
     Py_ssize_t kth;
-    NPY_SORTKIND sortkind = NPY_QUICKSORT;
+    NPY_SELECTKIND sortkind = NPY_QUICKSELECT;
     PyObject *order = NULL;
     PyArray_Descr *saved = NULL;
     PyArray_Descr *newd;
@@ -1184,7 +1184,7 @@ array_partition(PyArrayObject *self, PyObject *args, PyObject *kwds)
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|iO&O", kwlist,
                                      &kth,
                                      &axis,
-                                     PyArray_SortkindConverter, &sortkind,
+                                     PyArray_SelectkindConverter, &sortkind,
                                      &order)) {
         return NULL;
     }
@@ -1284,7 +1284,7 @@ array_argpartition(PyArrayObject *self, PyObject *args, PyObject *kwds)
 {
     int axis = -1;
     Py_ssize_t kth;
-    NPY_SORTKIND sortkind = NPY_QUICKSORT;
+    NPY_SELECTKIND sortkind = NPY_QUICKSELECT;
     PyObject *order = NULL, *res;
     PyArray_Descr *newd, *saved=NULL;
     static char *kwlist[] = {"kth", "axis", "kind", "order", NULL};
@@ -1292,7 +1292,7 @@ array_argpartition(PyArrayObject *self, PyObject *args, PyObject *kwds)
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|O&O&O", kwlist,
                                      &kth,
                                      PyArray_AxisConverter, &axis,
-                                     PyArray_SortkindConverter, &sortkind,
+                                     PyArray_SelectkindConverter, &sortkind,
                                      &order)) {
         return NULL;
     }

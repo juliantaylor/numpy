@@ -154,10 +154,12 @@ typedef enum {
 } NPY_SORTKIND;
 #define NPY_NSORTS (NPY_MERGESORT + 1)
 
+
 typedef enum {
         NPY_QUICKSELECT=0,
+        NPY_MEDOFMED5=1,
 } NPY_SELECTKIND;
-#define NPY_NSELECTS (NPY_QUICKSELECT + 1)
+#define NPY_NSELECTS (NPY_MEDOFMED5 + 1)
 
 
 typedef enum {
@@ -525,13 +527,6 @@ typedef struct {
          * Can be NULL
          */
         PyArray_ArgFunc *argmin;
-
-        /*
-         * Partition function based on selection
-         * Can be NULL
-         */
-        PyArray_PartitionFunc *partition[NPY_NSELECTS];
-        PyArray_ArgPartitionFunc *argpartition[NPY_NSELECTS];
 
 } PyArray_ArrFuncs;
 

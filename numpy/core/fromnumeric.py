@@ -535,7 +535,7 @@ def transpose(a, axes=None):
     return transpose(axes)
 
 
-def partition(a, kth, axis=-1):
+def partition(a, kth, axis=-1, kind='quickselect', order=None):
     """
     Return a partitioned copy of an array.
 
@@ -557,8 +557,8 @@ def partition(a, kth, axis=-1):
     axis : int or None, optional
         Axis along which to sort. If None, the array is flattened before
         sorting. The default is -1, which sorts along the last axis.
-    kind : {'quicksort', 'mergesort', 'heapsort'}, optional
-        Sorting algorithm. Default is 'quicksort'.
+    kind : {'quickselect', 'medianofmedian5}, optional
+        Selection algorithm. Default is 'quicksort'.
     order : list, optional
         When `a` is a structured array, this argument specifies which fields
         to compare first, second, and so on.  This list does not need to
@@ -576,17 +576,17 @@ def partition(a, kth, axis=-1):
 
     Notes
     -----
-    The various sorting algorithms are characterized by their average speed,
+    The various selection algorithms are characterized by their average speed,
     worst case performance, work space size, and whether they are stable. A
-    stable sort keeps items with the same key in the same relative
-    order. The three available algorithms have the following
-    properties:
+    stable sort keeps items with the same key in the same relative order. The
+    three available algorithms have the following properties:
 
-    ============= ======= ============= ============ =======
-       kind        speed   worst case    work space  stable
-    ============= ======= ============= ============ =======
-    'quickselect'    1       O(n^2)          0          no
-    ============= ======= ============= ============ =======
+    ================= ======= ============= ============ =======
+       kind            speed   worst case    work space  stable
+    ================= ======= ============= ============ =======
+    'quickselect'        1       O(n^2)          0          no
+    'medianofmedian5'    2       O(n)            0          no
+    ================= ======= ============= ============ =======
 
     All the partition algorithms make temporary copies of the data when
     partitioning along any but the last axis.  Consequently, partitioning
@@ -610,11 +610,11 @@ def partition(a, kth, axis=-1):
         axis = 0
     else:
         a = asanyarray(a).copy()
-    a.partition(kth, axis=axis)
+    a.partition(kth, axis=axis, kind=kind, order=order)
     return a
 
 
-def argpartition(a, kth, axis=-1):
+def argpartition(a, kth, axis=-1, kind='quickselect', order=None):
     """
     Perform an indirect partition along the given axis using the algorithm
     specified by the `kind` keyword. It returns an array of indices of the
@@ -633,8 +633,8 @@ def argpartition(a, kth, axis=-1):
     axis : int or None, optional
         Axis along which to sort.  The default is -1 (the last axis). If None,
         the flattened array is used.
-    kind : {'quicksort', 'mergesort', 'heapsort'}, optional
-        Sorting algorithm.
+    kind : {'quickselect', 'medianofmedian5'}, optional
+        Selection algorithm. Default is 'quickselect'
     order : list, optional
         When `a` is an array with fields defined, this argument specifies
         which fields to compare first, second, etc.  Not all fields need be
@@ -664,7 +664,7 @@ def argpartition(a, kth, axis=-1):
     array([2, 3, 0, 1])
 
     """
-    return a.argpartition(kth, axis)
+    return a.argpartition(kth, axis, kind=kind, order=order)
 
 
 def sort(a, axis=-1, kind='quicksort', order=None):
