@@ -4223,7 +4223,7 @@ add_newdoc('numpy.core.multiarray', 'ndarray', ('partition',
     Rearranges the elements in the array in such a way that the element in kth
     position is in the position it would be in a sorted array. All elements
     smaller than the kth element are moved before this element and all greater
-    elements are moved behind it. The ordering of the elements in the two
+    or equal are moved behind it. The ordering of the elements in the two
     partitions is undefined.
 
     Parameters

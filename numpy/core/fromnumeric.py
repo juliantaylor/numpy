@@ -539,11 +539,11 @@ def partition(a, kth, axis=-1):
     """
     Return a partitioned copy of an array.
 
-    Rearranges the elements in the array in such a way that the element in kth
-    position is in the position it would be in a sorted array. All elements
-    smaller than the kth element are moved before this element and all greater
-    elements are moved behind it. The ordering of the elements in the two
-    partitions is undefined.
+    Creates a copy of the array with its elements rearranges in such a way that
+    the element in kth position is in the position it would be in a sorted
+    array. All elements smaller than the kth element are moved before this
+    element and all greater or equal are moved behind it. The ordering of the
+    elements in the two partitions is undefined.
 
     Parameters
     ----------
