@@ -58,10 +58,16 @@ quickselect_@suff@(@type@ *v, npy_intp num, npy_intp kth,
             @TYPE@_SWAP(v[high], v[mid]);
         if (@TYPE@_LT(v[high], v[low]))
             @TYPE@_SWAP(v[high], v[low]);
+        /* move pivot to low */
         if (@TYPE@_LT(v[low], v[mid]))
             @TYPE@_SWAP(v[low], v[mid]);
+        /* move 3-lowest element to low + 1 */
         @TYPE@_SWAP(v[mid], v[low + 1]);
 
+        /*
+         * find place to put pivot (in low):
+         * pivot 3-lowest [x x x] 3-highest
+         */
         const @type@ t = v[low];
         for (;;) {
             do ll++; while (@TYPE@_LT(v[ll], t));
@@ -73,6 +79,7 @@ quickselect_@suff@(@type@ *v, npy_intp num, npy_intp kth,
             @TYPE@_SWAP(v[ll], v[hh])
         }
 
+        /* move pivot into position */
         @TYPE@_SWAP(v[low], v[hh])
 
         if (hh >= kth)
@@ -105,10 +112,16 @@ aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, npy_intp kth, voi
             INTP_SWAP(tosort[high], tosort[mid]);
         if (@TYPE@_LT(v[tosort[high]], v[tosort[low]]))
             INTP_SWAP(tosort[high], tosort[low]);
+        /* move pivot to low */
         if (@TYPE@_LT(v[tosort[low]], v[tosort[mid]]))
             INTP_SWAP(tosort[low], tosort[mid]);
+        /* move 3-lowest element to low + 1 */
         INTP_SWAP(tosort[mid], tosort[low + 1]);
 
+        /*
+         * find place to put pivot (in low):
+         * pivot 3-lowest [x x x] 3-highest
+         */
         const @type@ t = v[tosort[low]];
         for (;;) {
             do ll++; while (@TYPE@_LT(v[tosort[ll]], t));
@@ -120,6 +133,7 @@ aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, npy_intp kth, voi
             INTP_SWAP(tosort[ll], tosort[hh])
         }
 
+        /* move pivot into position */
         INTP_SWAP(tosort[low], tosort[hh])
 
         if (hh >= kth)
