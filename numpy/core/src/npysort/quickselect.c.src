@@ -40,311 +40,217 @@
  *         npy_ushort, npy_float, npy_double, npy_longdouble, npy_cfloat,
  *         npy_cdouble, npy_clongdouble#
  */
-
-
-/*
- * quickselect using 3-median as pivot, worst case O(n^2)
- */
-int
-quickselect_@suff@(@type@ *v, npy_intp num, npy_intp kth,
-                   void *NOT_USED)
-{
-    npy_intp low  = 0;
-    npy_intp high = num - 1;
-
-    for (;low + 1 < high;) {
-        const npy_intp mid = low + (high - low) / 2;
-        npy_intp       ll = low + 1;
-        npy_intp       hh = high;
-
-        /* median of 3 pivot strategy */
-        if (@TYPE@_LT(v[high], v[mid]))
-            @TYPE@_SWAP(v[high], v[mid]);
-        if (@TYPE@_LT(v[high], v[low]))
-            @TYPE@_SWAP(v[high], v[low]);
-        /* move pivot to low */
-        if (@TYPE@_LT(v[low], v[mid]))
-            @TYPE@_SWAP(v[low], v[mid]);
-        /* move 3-lowest element to low + 1 */
-        @TYPE@_SWAP(v[mid], v[low + 1]);
-
-        /*
-         * find place to put pivot (in low):
-         * pivot 3-lowest [x x x] 3-highest
-         */
-        const @type@ t = v[low];
-        for (;;) {
-            do ll++; while (@TYPE@_LT(v[ll], t));
-            do hh--; while (@TYPE@_LT(t, v[hh]));
-
-            if (hh < ll)
-                break;
-
-            @TYPE@_SWAP(v[ll], v[hh])
-        }
-
-        /* move pivot into position */
-        @TYPE@_SWAP(v[low], v[hh])
-
-        if (hh >= kth)
-            high = hh - 1;
-        if (hh <= kth)
-            low = ll;
-    }
-
-    if (high == low + 1)
-        if (@TYPE@_LT(v[high], v[low]))
-            @TYPE@_SWAP(v[high], v[low]);
-
-    return 0;
-}
-
-
-/* select index of median of five elements */
-static npy_intp median5_@suff@(@type@ * v)
-{
-    /* could be optimized as we don't need to swap */
-    if (@TYPE@_LT(v[1], v[0])) {
-        @TYPE@_SWAP(v[1], v[0]);
-    }
-    if (@TYPE@_LT(v[4], v[3])) {
-        @TYPE@_SWAP(v[4], v[3]);
-    }
-    if (@TYPE@_LT(v[3], v[0])) {
-        @TYPE@_SWAP(v[3], v[0]);
-    }
-    if (@TYPE@_LT(v[4], v[1])) {
-        @TYPE@_SWAP(v[4], v[1]);
-    }
-    if (@TYPE@_LT(v[2], v[1])) {
-        @TYPE@_SWAP(v[2], v[1]);
-    }
-    if (@TYPE@_LT(v[3], v[2])) {
-        @TYPE@_SWAP(v[3], v[2]);
-    }
-    if (@TYPE@_LT(v[2], v[1])) {
-        return 1;
-    }
-    else {
-        return 2;
-    }
-}
-
-
 int
 quickselect_mom_@suff@(@type@ *v, npy_intp num, npy_intp kth,
                        void *NOT_USED);
-static npy_intp
-median_of_median5_@suff@(@type@ *v, const npy_intp num)
-{
-    npy_intp i;
-    npy_intp right = num - 1;
-    npy_intp nmed = (right + 1) / 5;
-    npy_intp subleft = 0;
-    for (i = 0; i < nmed; i++) {
-        npy_intp m = median5_@suff@(v + subleft);
-        @TYPE@_SWAP(v[subleft + m], v[i]);
-        subleft += 5;
-    }
+int
+aquickselect_mom_@suff@(@type@ *v, npy_intp * tosort, npy_intp num,
+                        npy_intp kth, void *NOT_USED);
 
-    if (nmed > 2)
-        quickselect_mom_@suff@(v, nmed, nmed / 2, NULL);
-    return nmed / 2;
-}
+static npy_intp
+amedian_of_median5_@suff@(@type@ *v, npy_intp* tosort, const npy_intp num);
+
+static npy_intp
+median_of_median5_@suff@(@type@ *v, const npy_intp num);
+
+/**begin repeat1
+ * #name = , a#
+ * #idx = , tosort#
+ * #arg = 0, 1#
+ */
+#if @arg@
+#define IDX(x) tosort[x]
+#define SORTEE(x) tosort[x]
+#define SWAP INTP_SWAP
+#define MEDIAN3_SWAP(v, tosort, low, mid, high) \
+    amedian3_swap_@suff@(v, tosort, low, mid, high)
+#define MEDIAN5(v, tosort, subleft) \
+        amedian5_@suff@(v, tosort + subleft)
+#define UNGUARDED_PARTITION(v, tosort, pivot, ll, hh) \
+        aunguarded_partition_@suff@(v, tosort, pivot, ll, hh)
+#define QUICKSELECT_MOM(v, tosort, num, kth) \
+        aquickselect_mom_@suff@(v, tosort, nmed, nmed / 2, NULL)
+#else
+#define IDX(x) (x)
+#define SORTEE(x) v[x]
+#define SWAP @TYPE@_SWAP
+#define MEDIAN3_SWAP(v, tosort, low, mid, high) \
+    median3_swap_@suff@(v, low, mid, high)
+#define MEDIAN5(v, tosort, subleft) \
+        median5_@suff@(v + subleft)
+#define UNGUARDED_PARTITION(v, tosort, pivot, ll, hh) \
+        unguarded_partition_@suff@(v, pivot, ll, hh)
+#define QUICKSELECT_MOM(v, tosort, num, kth) \
+        quickselect_mom_@suff@(v, nmed, nmed / 2, NULL)
+#endif
 
 
 /*
- * quickselect using median of 5-median as pivot, worst case O(n)
+ * median of 3 pivot strategy
+ * gets min and median and moves median to low and min to low + 1
+ * for efficient partitioning
  */
-int
-quickselect_mom_@suff@(@type@ *v, npy_intp num, npy_intp kth,
-                       void *NOT_USED)
+static NPY_INLINE void
+@name@median3_swap_@suff@(@type@ * v,
+#if @arg@
+                          npy_intp * tosort,
+#endif
+                          npy_intp low, npy_intp mid, npy_intp high)
 {
-    npy_intp low  = 0;
-    npy_intp high = num - 1;
-
-    for (;low + 1 < high;) {
-        npy_intp       ll = low;
-        npy_intp       hh = high + 1;
-        const npy_intp mid = ll + median_of_median5_@suff@(v + ll, hh - ll);
-
-        @TYPE@_SWAP(v[mid], v[low]);
-
-        /*
-         * find place to put pivot (in low):
-         * pivot [x x x]
-         */
-        const @type@ t = v[low];
-        for (;;) {
-            do ll++; while (ll < num && @TYPE@_LT(v[ll], t));
-            do hh--; while (@TYPE@_LT(t, v[hh]));
-
-            if (hh < ll)
-                break;
-
-            @TYPE@_SWAP(v[ll], v[hh])
-        }
-
-        /* move pivot into position */
-        @TYPE@_SWAP(v[low], v[hh])
-
-        if (hh >= kth)
-            high = hh - 1;
-        if (hh <= kth)
-            low = ll;
-    }
-
-    if (high == low + 1)
-        if (@TYPE@_LT(v[high], v[low]))
-            @TYPE@_SWAP(v[high], v[low]);
-
-    return 0;
-}
-
-
-int
-aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, npy_intp kth, void *NOT_USED)
-{
-    npy_intp low  = 0;
-    npy_intp high = num - 1;
-
-    for (;low + 1 < high;) {
-        const npy_intp mid = low + (high - low) / 2;
-        npy_intp       ll = low + 1;
-        npy_intp       hh = high;
-
-        /* median of 3 pivot strategy */
-        if (@TYPE@_LT(v[tosort[high]], v[tosort[mid]]))
-            INTP_SWAP(tosort[high], tosort[mid]);
-        if (@TYPE@_LT(v[tosort[high]], v[tosort[low]]))
-            INTP_SWAP(tosort[high], tosort[low]);
-        /* move pivot to low */
-        if (@TYPE@_LT(v[tosort[low]], v[tosort[mid]]))
-            INTP_SWAP(tosort[low], tosort[mid]);
-        /* move 3-lowest element to low + 1 */
-        INTP_SWAP(tosort[mid], tosort[low + 1]);
-
-        /*
-         * find place to put pivot (in low):
-         * pivot 3-lowest [x x x] 3-highest
-         */
-        const @type@ t = v[tosort[low]];
-        for (;;) {
-            do ll++; while (ll < num && @TYPE@_LT(v[tosort[ll]], t));
-            do hh--; while (@TYPE@_LT(t, v[tosort[hh]]));
-
-            if (hh < ll)
-                break;
-
-            INTP_SWAP(tosort[ll], tosort[hh])
-        }
-
-        /* move pivot into position */
-        INTP_SWAP(tosort[low], tosort[hh])
-
-        if (hh >= kth)
-            high = hh - 1;
-        if (hh <= kth)
-            low = ll;
-    }
-
-    if (high == low + 1)
-        if (@TYPE@_LT(v[tosort[high]], v[tosort[low]]))
-            INTP_SWAP(tosort[high], tosort[low]);
-
-    return 0;
+    if (@TYPE@_LT(v[IDX(high)], v[IDX(mid)]))
+        SWAP(SORTEE(high), SORTEE(mid));
+    if (@TYPE@_LT(v[IDX(high)], v[IDX(low)]))
+        SWAP(SORTEE(high), SORTEE(low));
+    /* move pivot to low */
+    if (@TYPE@_LT(v[IDX(low)], v[IDX(mid)]))
+        SWAP(SORTEE(low), SORTEE(mid));
+    /* move 3-lowest element to low + 1 */
+    SWAP(SORTEE(mid), SORTEE(low + 1));
 }
 
 
 /* select index of median of five elements */
-static npy_intp amedian5_@suff@(const @type@ * v, npy_intp * tosort)
+static npy_intp @name@median5_@suff@(
+#if @arg@
+                                    const @type@ * v, npy_intp * tosort
+#else
+                                    @type@ * v
+#endif
+                                    )
 {
     /* could be optimized as we don't need to swap */
-    if (@TYPE@_LT(v[tosort[1]], v[tosort[0]])) {
-        INTP_SWAP(tosort[1], tosort[0]);
+    if (@TYPE@_LT(v[IDX(1)], v[IDX(0)])) {
+        SWAP(SORTEE(1), SORTEE(0));
     }
-    if (@TYPE@_LT(v[tosort[4]], v[tosort[3]])) {
-        INTP_SWAP(tosort[4], tosort[3]);
+    if (@TYPE@_LT(v[IDX(4)], v[IDX(3)])) {
+        SWAP(SORTEE(4), SORTEE(3));
     }
-    if (@TYPE@_LT(v[tosort[3]], v[tosort[0]])) {
-        INTP_SWAP(tosort[3], tosort[0]);
+    if (@TYPE@_LT(v[IDX(3)], v[IDX(0)])) {
+        SWAP(SORTEE(3), SORTEE(0));
     }
-    if (@TYPE@_LT(v[tosort[4]], v[tosort[1]])) {
-        INTP_SWAP(tosort[4], tosort[1]);
+    if (@TYPE@_LT(v[IDX(4)], v[IDX(1)])) {
+        SWAP(SORTEE(4), SORTEE(1));
     }
-    if (@TYPE@_LT(v[tosort[2]], v[tosort[1]])) {
-        INTP_SWAP(tosort[2], tosort[1]);
+    if (@TYPE@_LT(v[IDX(2)], v[IDX(1)])) {
+        SWAP(SORTEE(2), SORTEE(1));
     }
-    if (@TYPE@_LT(v[tosort[3]], v[tosort[2]])) {
-        INTP_SWAP(tosort[3], tosort[2]);
-    }
-    if (@TYPE@_LT(v[tosort[2]], v[tosort[1]])) {
-        return 1;
+    if (@TYPE@_LT(v[IDX(3)], v[IDX(2)])) {
+        if (@TYPE@_LT(v[IDX(3)], v[IDX(1)])) {
+            return 1;
+        }
+        else {
+            return 3;
+        }
     }
     else {
-        return 2;
+        if (@TYPE@_LT(v[IDX(2)], v[IDX(1)])) {
+            return 1;
+        }
+        else {
+            return 2;
+        }
     }
-}
-
-int
-aquickselect_mom_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-static npy_intp
-amedian_of_median5_@suff@(@type@ *v, npy_intp* tosort, const npy_intp num)
-{
-    npy_intp i;
-    npy_intp right = num - 1;
-    npy_intp nmed = (right + 1) / 5;
-    npy_intp subleft = 0;
-    for (i = 0; i < nmed; i++) {
-        npy_intp m = amedian5_@suff@(v, tosort + subleft);
-        INTP_SWAP(tosort[subleft + m], tosort[i]);
-        subleft += 5;
-    }
-
-    if (nmed > 2)
-        aquickselect_mom_@suff@(v, tosort, nmed, nmed / 2, NULL);
-    return nmed / 2;
 }
 
 
 /*
- * quickselect using median of 5-median as pivot, worst case O(n)
+ * partition and return the index were the pivot belongs
+ * pivot can't be smallest or largest element
  */
+static NPY_INLINE void
+@name@unguarded_partition_@suff@(@type@ * v,
+#if @arg@
+                                 npy_intp * tosort,
+#endif
+                                 const @type@ pivot,
+                                 npy_intp * ll, npy_intp * hh)
+{
+    for (;;) {
+        do (*ll)++; while (@TYPE@_LT(v[IDX(*ll)], pivot));
+        do (*hh)--; while (@TYPE@_LT(pivot, v[IDX(*hh)]));
+
+        if (*hh < *ll)
+            break;
+
+        SWAP(SORTEE(*ll), SORTEE(*hh));
+    }
+}
+
+
+static npy_intp
+@name@median_of_median5_@suff@(@type@ *v,
+#if @arg@
+                               npy_intp* tosort,
+#endif
+                               const npy_intp num)
+{
+    npy_intp i, subleft;
+    npy_intp right = num - 1;
+    npy_intp nmed = (right + 1) / 5;
+    for (i = 0, subleft = 0; i < nmed; i++, subleft += 5) {
+        npy_intp m = MEDIAN5(v, tosort, subleft);
+        SWAP(SORTEE(subleft + m), SORTEE(i));
+    }
+
+    if (nmed > 2)
+        QUICKSELECT_MOM(v, tosort, nmed, nmed / 2);
+    return nmed / 2;
+}
+
+
+/**begin repeat2
+ * #alg = , _mom#
+ * #mom = 0, 1#
+ */
+
 int
-aquickselect_mom_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED)
+@name@quickselect@alg@_@suff@(@type@ *v,
+#if @arg@
+                              npy_intp* tosort,
+#endif
+                              npy_intp num, npy_intp kth, void *NOT_USED)
 {
     npy_intp low  = 0;
     npy_intp high = num - 1;
 
+    /* guarantee three elements */
+    /* FIXME: add test for this */
     for (;low + 1 < high;) {
-        npy_intp       ll = low;
-        npy_intp       hh = high + 1;
-        const npy_intp mid = ll + amedian_of_median5_@suff@(v,
-                                                            tosort + ll,
-                                                            hh - ll);
-
-        INTP_SWAP(tosort[mid], tosort[low]);
+        npy_intp       ll = low + 1;
+        npy_intp       hh = high;
+#if @mom@
+        /* required to do unguarded partition */
+        if (hh - ll < 5) {
+            const npy_intp mid = low + (high - low) / 2;
+            MEDIAN3_SWAP(v, tosort, low, mid, high);
+        }
+        else {
+            npy_intp mid;
+#if @arg@
+            mid = ll + amedian_of_median5_@suff@(v, tosort + ll, hh - ll);
+#else
+            mid = ll + median_of_median5_@suff@(v + ll, hh - ll);
+#endif
+            SWAP(SORTEE(mid), SORTEE(low));
+            /* adapt for the larger partition than med3 pivot */
+            ll--;
+            hh++;
+        }
+#else
+        const npy_intp mid = low + (high - low) / 2;
+        /* median of 3 pivot strategy, swapping for efficient partition */
+        MEDIAN3_SWAP(v, tosort, low, mid, high);
+#endif
 
         /*
          * find place to put pivot (in low):
-         * pivot [x x x]
+         * previous swapping remove need for index checks
+         * pivot 3-lowest [x x x] 3-highest
          */
-        const @type@ t = v[tosort[low]];
-        for (;;) {
-            do ll++; while (ll < num && @TYPE@_LT(v[tosort[ll]], t));
-            do hh--; while (@TYPE@_LT(t, v[tosort[hh]]));
-
-            if (hh < ll)
-                break;
-
-            INTP_SWAP(tosort[ll], tosort[hh])
-        }
+        UNGUARDED_PARTITION(v, tosort, v[IDX(low)], &ll, &hh);
 
         /* move pivot into position */
-        INTP_SWAP(tosort[low], tosort[hh])
+        SWAP(SORTEE(low), SORTEE(hh))
 
         if (hh >= kth)
             high = hh - 1;
@@ -352,12 +258,24 @@ aquickselect_mom_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
             low = ll;
     }
 
+    /* two elements */
     if (high == low + 1)
-        if (@TYPE@_LT(v[tosort[high]], v[tosort[low]]))
-            INTP_SWAP(tosort[high], tosort[low]);
+        if (@TYPE@_LT(v[IDX(high)], v[IDX(low)]))
+            SWAP(SORTEE(high), SORTEE(low))
 
     return 0;
 }
+/**end repeat2**/
+
+
+#undef IDX
+#undef SWAP
+#undef SORTEE
+#undef MEDIAN3_SWAP
+#undef MEDIAN5
+#undef UNGUARDED_PARTITION
+#undef QUICKSELECT_MOM
+/**end repeat1**/
 
 /**end repeat**/
 
