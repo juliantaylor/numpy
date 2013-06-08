@@ -19,9 +19,11 @@
 #include "npy_sort.h"
 #include "npysort_common.h"
 #include "numpy/npy_math.h"
+#include "npy_partition.h"
 #include <stdlib.h>
 
 #define NOT_USED NPY_UNUSED(unused)
+#define MAX_PIVOT_STACK 50
 
 
 /*
@@ -45,18 +47,15 @@
  *         npy_cdouble, npy_clongdouble#
  */
 
-int
-introselect_@suff@(@type@ *v, npy_intp num, npy_intp kth,
-                   void *NOT_USED);
-int
-aintroselect_@suff@(@type@ *v, npy_intp * tosort, npy_intp num,
-                    npy_intp kth, void *NOT_USED);
+static npy_intp
+amedian_of_median5_@suff@(@type@ *v, npy_intp* tosort, const npy_intp num,
+                         npy_intp * pivots,
+                         npy_intp * npiv);
 
 static npy_intp
-amedian_of_median5_@suff@(@type@ *v, npy_intp* tosort, const npy_intp num);
-
-static npy_intp
-median_of_median5_@suff@(@type@ *v, const npy_intp num);
+median_of_median5_@suff@(@type@ *v, const npy_intp num,
+                         npy_intp * pivots,
+                         npy_intp * npiv);
 
 /**begin repeat1
  * #name = , a#
@@ -74,8 +73,8 @@ median_of_median5_@suff@(@type@ *v, const npy_intp num);
         amedian5_@suff@(v, tosort + subleft)
 #define UNGUARDED_PARTITION(v, tosort, pivot, ll, hh) \
         aunguarded_partition_@suff@(v, tosort, pivot, ll, hh)
-#define INTROSELECT(v, tosort, num, kth) \
-        aintroselect_@suff@(v, tosort, nmed, nmed / 2, NULL)
+#define INTROSELECT(v, tosort, num, kth, pivots, npiv) \
+        aintroselect_@suff@(v, tosort, nmed, nmed / 2, pivots, npiv, NULL)
 #else
 #define IDX(x) (x)
 #define SORTEE(x) v[x]
@@ -86,8 +85,8 @@ median_of_median5_@suff@(@type@ *v, const npy_intp num);
         median5_@suff@(v + subleft)
 #define UNGUARDED_PARTITION(v, tosort, pivot, ll, hh) \
         unguarded_partition_@suff@(v, pivot, ll, hh)
-#define INTROSELECT(v, tosort, num, kth) \
-        introselect_@suff@(v, nmed, nmed / 2, NULL)
+#define INTROSELECT(v, tosort, num, kth, pivots, npiv) \
+        introselect_@suff@(v, nmed, nmed / 2, pivots, npiv, NULL)
 #endif
 
 
@@ -195,7 +194,9 @@ static npy_intp
 #if @arg@
                                npy_intp* tosort,
 #endif
-                               const npy_intp num)
+                               const npy_intp num,
+                               npy_intp * pivots,
+                               npy_intp * npiv)
 {
     npy_intp i, subleft;
     npy_intp right = num - 1;
@@ -206,7 +207,7 @@ static npy_intp
     }
 
     if (nmed > 2)
-        INTROSELECT(v, tosort, nmed, nmed / 2);
+        INTROSELECT(v, tosort, nmed, nmed / 2, pivots, npiv);
     return nmed / 2;
 }
 
@@ -216,11 +217,37 @@ int
 #if @arg@
                          npy_intp* tosort,
 #endif
-                         npy_intp num, npy_intp kth, void *NOT_USED)
+                         npy_intp num, npy_intp kth,
+                         npy_intp * pivots,
+                         npy_intp * npiv,
+                         void *NOT_USED)
 {
     npy_intp low  = 0;
     npy_intp high = num - 1;
+
+    if (npiv == NULL)
+        pivots = NULL;
+
+    while (pivots != NULL && *npiv > 0) {
+        if (pivots[*npiv - 1] > kth) {
+            /* pivot larger than kth set it as upper bound */
+            high = pivots[*npiv - 1] - 1;
+            break;
+        }
+        else if (pivots[*npiv - 1] == kth) {
+            /* kth was already found in a previous iteration -> done */
+            return 0;
+        }
+
+        low = pivots[*npiv - 1] + 1;
+
+        /* pop from stack */
+        *npiv -= 1;
+    }
+
     npy_intp depth_limit = npy_log2(num) * 2;
+
+
 
     /* guarantee three elements */
     for (;low + 1 < high;) {
@@ -240,10 +267,11 @@ int
         }
         else {
             npy_intp mid;
+            /* FIXME: always use pivots to optimize this iterative partition */
 #if @arg@
-            mid = ll + amedian_of_median5_@suff@(v, tosort + ll, hh - ll);
+            mid = ll + amedian_of_median5_@suff@(v, tosort + ll, hh - ll, NULL, NULL);
 #else
-            mid = ll + median_of_median5_@suff@(v + ll, hh - ll);
+            mid = ll + median_of_median5_@suff@(v + ll, hh - ll, NULL, NULL);
 #endif
             SWAP(SORTEE(mid), SORTEE(low));
             /* adapt for the larger partition than med3 pivot */
@@ -261,7 +289,13 @@ int
         UNGUARDED_PARTITION(v, tosort, v[IDX(low)], &ll, &hh);
 
         /* move pivot into position */
-        SWAP(SORTEE(low), SORTEE(hh))
+        SWAP(SORTEE(low), SORTEE(hh));
+
+        /* store the pivot */
+        if (pivots != NULL && hh > kth && *npiv < MAX_PIVOT_STACK) {
+            pivots[*npiv] = hh;
+            (*npiv) += 1;
+        }
 
         if (hh >= kth)
             high = hh - 1;
@@ -305,16 +339,15 @@ int
  */
 
 int
-introselect_@suff@(@type@ *start, npy_intp num, PyArrayObject *arr)
+introselect_@suff@(@type@ *start, npy_intp num, npy_intp kth, PyArrayObject *arr)
 {
     return quicksort_@suff@(start, num, arr);
 }
 
-
 int
-aintroselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, PyArrayObject *arr)
+aintroselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, npy_intp kth, void *null)
 {
-    return aquicksort_@suff@(v, tosort, num, arr);
+    return aquicksort_@suff@(v, tosort, num, null);
 }
 
 /**end repeat**/

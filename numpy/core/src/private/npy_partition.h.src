@@ -44,22 +44,25 @@
  *         npy_cdouble, npy_clongdouble#
  */
 
-int introselect_@suff@(@type@ *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_@suff@(@type@ *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_@suff@(@type@ *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 /**end repeat**/
 
-int introselect_string(npy_char *vec, npy_intp cnt, PyArrayObject *arr);
+int introselect_string(npy_char *vec, npy_intp cnt, npy_intp kth, PyArrayObject *arr);
 int aintroselect_string(npy_char *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
 
 
-int introselect_unicode(npy_ucs4 *vec, npy_intp cnt, PyArrayObject *arr);
+int introselect_unicode(npy_ucs4 *vec, npy_intp cnt, npy_intp kth, PyArrayObject *arr);
 int aintroselect_unicode(npy_ucs4 *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
 
 int npy_introselect(void *base, size_t num, size_t size, size_t kth, npy_comparator cmp);

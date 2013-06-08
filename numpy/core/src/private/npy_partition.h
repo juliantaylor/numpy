@@ -41,226 +41,280 @@
 
 #line 46
 
-int introselect_bool(npy_bool *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_bool(npy_bool *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_bool(npy_bool *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_bool(npy_bool *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_bool(npy_bool *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_byte(npy_byte *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_byte(npy_byte *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_byte(npy_byte *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_byte(npy_byte *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_byte(npy_byte *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_ubyte(npy_ubyte *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_ubyte(npy_ubyte *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_ubyte(npy_ubyte *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_ubyte(npy_ubyte *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_ubyte(npy_ubyte *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_short(npy_short *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_short(npy_short *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_short(npy_short *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_short(npy_short *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_short(npy_short *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_ushort(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_ushort(npy_ushort *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_ushort(npy_ushort *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_ushort(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_ushort(npy_ushort *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_int(npy_int *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_int(npy_int *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_int(npy_int *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_int(npy_int *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_int(npy_int *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_uint(npy_uint *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_uint(npy_uint *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_uint(npy_uint *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_uint(npy_uint *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_uint(npy_uint *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_long(npy_long *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_long(npy_long *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_long(npy_long *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_long(npy_long *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_long(npy_long *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_ulong(npy_ulong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_ulong(npy_ulong *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_ulong(npy_ulong *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_ulong(npy_ulong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_ulong(npy_ulong *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_longlong(npy_longlong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_longlong(npy_longlong *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_longlong(npy_longlong *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_longlong(npy_longlong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_longlong(npy_longlong *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_ulonglong(npy_ulonglong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_ulonglong(npy_ulonglong *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_ulonglong(npy_ulonglong *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_ulonglong(npy_ulonglong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_ulonglong(npy_ulonglong *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_half(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_half(npy_ushort *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_half(npy_ushort *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_half(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_half(npy_ushort *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_float(npy_float *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_float(npy_float *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_float(npy_float *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_float(npy_float *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_float(npy_float *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_double(npy_double *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_double(npy_double *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_double(npy_double *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_double(npy_double *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_double(npy_double *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_longdouble(npy_longdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_longdouble(npy_longdouble *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_longdouble(npy_longdouble *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_longdouble(npy_longdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_longdouble(npy_longdouble *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_cfloat(npy_cfloat *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_cfloat(npy_cfloat *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_cfloat(npy_cfloat *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_cfloat(npy_cfloat *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_cfloat(npy_cfloat *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_cdouble(npy_cdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_cdouble(npy_cdouble *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_cdouble(npy_cdouble *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_cdouble(npy_cdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_cdouble(npy_cdouble *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
 #line 46
 
-int introselect_clongdouble(npy_clongdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int introselect_clongdouble(npy_clongdouble *v, npy_intp num,
+                       npy_intp kth,
+                       npy_intp * pivots,
+                       npy_intp * npiv,
+                       void *NOT_USED);
 int aintroselect_clongdouble(npy_clongdouble *v, npy_intp* tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
-
-int introselect_mom_clongdouble(npy_clongdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aintroselect_mom_clongdouble(npy_clongdouble *v, npy_intp* tosort, npy_intp num,
-                            npy_intp kth, void *NOT_USED);
-
+                        npy_intp kth,
+                        npy_intp * pivots,
+                        npy_intp * npiv,
+                        void *NOT_USED);
 
 
 
-int introselect_string(npy_char *vec, npy_intp cnt, PyArrayObject *arr);
+
+int introselect_string(npy_char *vec, npy_intp cnt, npy_intp kth, PyArrayObject *arr);
 int aintroselect_string(npy_char *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
 
 
-int introselect_unicode(npy_ucs4 *vec, npy_intp cnt, PyArrayObject *arr);
+int introselect_unicode(npy_ucs4 *vec, npy_intp cnt, npy_intp kth, PyArrayObject *arr);
 int aintroselect_unicode(npy_ucs4 *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
 
 int npy_introselect(void *base, size_t num, size_t size, size_t kth, npy_comparator cmp);
@@ -272,7 +326,7 @@ typedef struct {
 } part_map;
 
 static part_map _part_map[] = {
-#line 87
+#line 90
     {
         NPY_BOOL,
         {
@@ -283,7 +337,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_BYTE,
         {
@@ -294,7 +348,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_UBYTE,
         {
@@ -305,7 +359,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_SHORT,
         {
@@ -316,7 +370,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_USHORT,
         {
@@ -327,7 +381,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_INT,
         {
@@ -338,7 +392,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_UINT,
         {
@@ -349,7 +403,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_LONG,
         {
@@ -360,7 +414,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_ULONG,
         {
@@ -371,7 +425,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_LONGLONG,
         {
@@ -382,7 +436,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_ULONGLONG,
         {
@@ -393,7 +447,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_HALF,
         {
@@ -404,7 +458,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_FLOAT,
         {
@@ -415,7 +469,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_DOUBLE,
         {
@@ -426,7 +480,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_LONGDOUBLE,
         {
@@ -437,7 +491,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_CFLOAT,
         {
@@ -448,7 +502,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_CDOUBLE,
         {
@@ -459,7 +513,7 @@ static part_map _part_map[] = {
         }
     },
 
-#line 87
+#line 90
     {
         NPY_CLONGDOUBLE,
         {

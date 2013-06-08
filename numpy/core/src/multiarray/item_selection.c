@@ -821,7 +821,7 @@ _new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
                 }
             }
             else {
-                if (part(buffer, N, kth, op) < 0) {
+                if (part(buffer, N, kth, NULL, NULL, op) < 0) {
                     PyDataMem_FREE(buffer);
                     goto fail;
                 }
@@ -843,7 +843,7 @@ _new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
                 }
             }
             else {
-                if (part(it->dataptr, N, kth, op) < 0) {
+                if (part(it->dataptr, N, kth, NULL, NULL, op) < 0) {
                     goto fail;
                 }
             }
@@ -941,7 +941,7 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
             }
             else {
                 if (argpart(valbuffer, (npy_intp *)indbuffer,
-                            N, kth, op) < 0) {
+                            N, kth, NULL, NULL, op) < 0) {
                     PyDataMem_FREE(valbuffer);
                     PyDataMem_FREE(indbuffer);
                     goto fail;
@@ -969,7 +969,7 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
             }
             else {
                 if (argpart(it->dataptr, (npy_intp *)rit->dataptr,
-                            N, kth, op) < 0) {
+                            N, kth, NULL, NULL, op) < 0) {
                     goto fail;
                 }
             }
