@@ -223,7 +223,6 @@ int
     npy_intp depth_limit = npy_log2(num) * 2;
 
     /* guarantee three elements */
-    /* FIXME: add test for this */
     for (;low + 1 < high;) {
         npy_intp       ll = low + 1;
         npy_intp       hh = high;

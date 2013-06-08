@@ -899,31 +899,36 @@ class TestMethods(TestCase):
             assert_array_equal(np.partition(d, 0, kind=k)[0], d)
             assert_array_equal(d[np.argpartition(d, 0, kind=k)],
                                np.partition(d, 0, kind=k))
-            d = np.array([1, 2])
-            assert_array_equal(np.partition(d, 0, kind=k)[0], 1)
-            assert_array_equal(np.partition(d, 1, kind=k)[1], 2)
-            assert_array_equal(d[np.argpartition(d, 0, kind=k)],
-                               np.partition(d, 0, kind=k))
-            assert_array_equal(d[np.argpartition(d, 1, kind=k)],
-                               np.partition(d, 1, kind=k))
-            d = np.array([2, 1])
-            assert_array_equal(np.partition(d, 0, kind=k)[0], 1)
-            assert_array_equal(np.partition(d, 1, kind=k)[1], 2)
-            assert_array_equal(d[np.argpartition(d, 0, kind=k)],
-                               np.partition(d, 0, kind=k))
-            assert_array_equal(d[np.argpartition(d, 1, kind=k)],
-                               np.partition(d, 1, kind=k))
-            for r in ([3, 2, 1], [1, 2, 3], [2, 1, 3], [2, 3, 1]):
+
+            for r in ([2, 1], [1, 2], [1, 1]):
                 d = np.array(r)
-                assert_array_equal(np.partition(d, 0, kind=k)[0], 1)
-                assert_array_equal(np.partition(d, 1, kind=k)[1], 2)
-                assert_array_equal(np.partition(d, 2, kind=k)[2], 3)
+                tgt = np.sort(d)
+                assert_array_equal(np.partition(d, 0, kind=k)[0], tgt[0])
+                assert_array_equal(np.partition(d, 1, kind=k)[1], tgt[1])
+                assert_array_equal(d[np.argpartition(d, 0, kind=k)],
+                                   np.partition(d, 0, kind=k))
+                assert_array_equal(d[np.argpartition(d, 1, kind=k)],
+                                   np.partition(d, 1, kind=k))
+                for i in range(d.size):
+                    d[i:].partition(0, kind=k)
+                assert_array_equal(d, tgt)
+
+            for r in ([3, 2, 1], [1, 2, 3], [2, 1, 3], [2, 3, 1],
+                      [1, 1, 1], [1, 2, 2], [2, 2, 1], [1, 2, 1]):
+                d = np.array(r)
+                tgt = np.sort(d)
+                assert_array_equal(np.partition(d, 0, kind=k)[0], tgt[0])
+                assert_array_equal(np.partition(d, 1, kind=k)[1], tgt[1])
+                assert_array_equal(np.partition(d, 2, kind=k)[2], tgt[2])
                 assert_array_equal(d[np.argpartition(d, 0, kind=k)],
                                    np.partition(d, 0, kind=k))
                 assert_array_equal(d[np.argpartition(d, 1, kind=k)],
                                    np.partition(d, 1, kind=k))
                 assert_array_equal(d[np.argpartition(d, 2, kind=k)],
                                    np.partition(d, 2, kind=k))
+                for i in range(d.size):
+                    d[i:].partition(0, kind=k)
+                assert_array_equal(d, tgt)
 
             d = np.ones((50))
             assert_array_equal(np.partition(d, 0, kind=k), d)
