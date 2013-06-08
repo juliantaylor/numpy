@@ -688,7 +688,7 @@ def configuration(parent_package='',top_path=None):
             sources = [join('src', 'npysort', 'quicksort.c.src'),
                        join('src', 'npysort', 'mergesort.c.src'),
                        join('src', 'npysort', 'heapsort.c.src'),
-                       join('src', 'npysort', 'quickselect.c.src')])
+                       join('src', 'npysort', 'selection.c.src')])
 
 
     #######################################################################
