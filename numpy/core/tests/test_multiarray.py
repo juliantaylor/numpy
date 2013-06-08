@@ -886,6 +886,7 @@ class TestMethods(TestCase):
 
     def test_partition(self):
         d = np.arange(10)
+        assert_raises(TypeError, np.partition, d, 2, kind=1)
         assert_raises(ValueError, np.partition, d, 2, kind="nonsense")
         assert_raises(ValueError, np.argpartition, d, 2, kind="nonsense")
         assert_raises(ValueError, d.partition, 2, axis=0, kind="nonsense")
@@ -953,6 +954,20 @@ class TestMethods(TestCase):
                                np.partition(d, 31, kind=k))
             assert_array_equal(d[np.argpartition(d, -6, kind=k)],
                                np.partition(d, 41, kind=k))
+
+            # equal elements
+            d = np.arange((47)) % 7
+            tgt = np.sort(np.arange((47)) % 7)
+            np.random.shuffle(d)
+            for i in range(d.size):
+                self.assertEqual(np.partition(d, i, kind=k)[i], tgt[i])
+            assert_array_equal(d[np.argpartition(d, 6, kind=k)],
+                               np.partition(d, 6, kind=k))
+            assert_array_equal(d[np.argpartition(d, 16, kind=k)],
+                               np.partition(d, 16, kind=k))
+            for i in range(d.size):
+                d[i:].partition(0, kind=k)
+            assert_array_equal(d, tgt)
 
             d = np.array([2, 1])
             d.partition(0, kind=k)
