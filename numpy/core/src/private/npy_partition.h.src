@@ -85,12 +85,12 @@ static part_map _part_map[] = {
     {
         NPY_@TYPE@,
         {
-            &quickselect_@suff@, 
-            &quickselect_mom_@suff@
+            (PyArray_PartitionFunc *)&quickselect_@suff@,
+            (PyArray_PartitionFunc *)&quickselect_mom_@suff@
         },
         {
-            &aquickselect_@suff@,
-            &aquickselect_mom_@suff@
+            (PyArray_ArgPartitionFunc *)&aquickselect_@suff@,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_@suff@
         }
     },
 /**end repeat**/

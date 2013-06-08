@@ -274,12 +274,12 @@ static part_map _part_map[] = {
     {
         NPY_BOOL,
         {
-            &quickselect_bool, 
-            &quickselect_mom_bool
+            (PyArray_PartitionFunc *)&quickselect_bool,
+            (PyArray_PartitionFunc *)&quickselect_mom_bool
         },
         {
-            &aquickselect_bool,
-            &aquickselect_mom_bool
+            (PyArray_ArgPartitionFunc *)&aquickselect_bool,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_bool
         }
     },
 
@@ -287,12 +287,12 @@ static part_map _part_map[] = {
     {
         NPY_BYTE,
         {
-            &quickselect_byte, 
-            &quickselect_mom_byte
+            (PyArray_PartitionFunc *)&quickselect_byte,
+            (PyArray_PartitionFunc *)&quickselect_mom_byte
         },
         {
-            &aquickselect_byte,
-            &aquickselect_mom_byte
+            (PyArray_ArgPartitionFunc *)&aquickselect_byte,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_byte
         }
     },
 
@@ -300,12 +300,12 @@ static part_map _part_map[] = {
     {
         NPY_UBYTE,
         {
-            &quickselect_ubyte, 
-            &quickselect_mom_ubyte
+            (PyArray_PartitionFunc *)&quickselect_ubyte,
+            (PyArray_PartitionFunc *)&quickselect_mom_ubyte
         },
         {
-            &aquickselect_ubyte,
-            &aquickselect_mom_ubyte
+            (PyArray_ArgPartitionFunc *)&aquickselect_ubyte,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_ubyte
         }
     },
 
@@ -313,12 +313,12 @@ static part_map _part_map[] = {
     {
         NPY_SHORT,
         {
-            &quickselect_short, 
-            &quickselect_mom_short
+            (PyArray_PartitionFunc *)&quickselect_short,
+            (PyArray_PartitionFunc *)&quickselect_mom_short
         },
         {
-            &aquickselect_short,
-            &aquickselect_mom_short
+            (PyArray_ArgPartitionFunc *)&aquickselect_short,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_short
         }
     },
 
@@ -326,12 +326,12 @@ static part_map _part_map[] = {
     {
         NPY_USHORT,
         {
-            &quickselect_ushort, 
-            &quickselect_mom_ushort
+            (PyArray_PartitionFunc *)&quickselect_ushort,
+            (PyArray_PartitionFunc *)&quickselect_mom_ushort
         },
         {
-            &aquickselect_ushort,
-            &aquickselect_mom_ushort
+            (PyArray_ArgPartitionFunc *)&aquickselect_ushort,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_ushort
         }
     },
 
@@ -339,12 +339,12 @@ static part_map _part_map[] = {
     {
         NPY_INT,
         {
-            &quickselect_int, 
-            &quickselect_mom_int
+            (PyArray_PartitionFunc *)&quickselect_int,
+            (PyArray_PartitionFunc *)&quickselect_mom_int
         },
         {
-            &aquickselect_int,
-            &aquickselect_mom_int
+            (PyArray_ArgPartitionFunc *)&aquickselect_int,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_int
         }
     },
 
@@ -352,12 +352,12 @@ static part_map _part_map[] = {
     {
         NPY_UINT,
         {
-            &quickselect_uint, 
-            &quickselect_mom_uint
+            (PyArray_PartitionFunc *)&quickselect_uint,
+            (PyArray_PartitionFunc *)&quickselect_mom_uint
         },
         {
-            &aquickselect_uint,
-            &aquickselect_mom_uint
+            (PyArray_ArgPartitionFunc *)&aquickselect_uint,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_uint
         }
     },
 
@@ -365,12 +365,12 @@ static part_map _part_map[] = {
     {
         NPY_LONG,
         {
-            &quickselect_long, 
-            &quickselect_mom_long
+            (PyArray_PartitionFunc *)&quickselect_long,
+            (PyArray_PartitionFunc *)&quickselect_mom_long
         },
         {
-            &aquickselect_long,
-            &aquickselect_mom_long
+            (PyArray_ArgPartitionFunc *)&aquickselect_long,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_long
         }
     },
 
@@ -378,12 +378,12 @@ static part_map _part_map[] = {
     {
         NPY_ULONG,
         {
-            &quickselect_ulong, 
-            &quickselect_mom_ulong
+            (PyArray_PartitionFunc *)&quickselect_ulong,
+            (PyArray_PartitionFunc *)&quickselect_mom_ulong
         },
         {
-            &aquickselect_ulong,
-            &aquickselect_mom_ulong
+            (PyArray_ArgPartitionFunc *)&aquickselect_ulong,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_ulong
         }
     },
 
@@ -391,12 +391,12 @@ static part_map _part_map[] = {
     {
         NPY_LONGLONG,
         {
-            &quickselect_longlong, 
-            &quickselect_mom_longlong
+            (PyArray_PartitionFunc *)&quickselect_longlong,
+            (PyArray_PartitionFunc *)&quickselect_mom_longlong
         },
         {
-            &aquickselect_longlong,
-            &aquickselect_mom_longlong
+            (PyArray_ArgPartitionFunc *)&aquickselect_longlong,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_longlong
         }
     },
 
@@ -404,12 +404,12 @@ static part_map _part_map[] = {
     {
         NPY_ULONGLONG,
         {
-            &quickselect_ulonglong, 
-            &quickselect_mom_ulonglong
+            (PyArray_PartitionFunc *)&quickselect_ulonglong,
+            (PyArray_PartitionFunc *)&quickselect_mom_ulonglong
         },
         {
-            &aquickselect_ulonglong,
-            &aquickselect_mom_ulonglong
+            (PyArray_ArgPartitionFunc *)&aquickselect_ulonglong,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_ulonglong
         }
     },
 
@@ -417,12 +417,12 @@ static part_map _part_map[] = {
     {
         NPY_HALF,
         {
-            &quickselect_half, 
-            &quickselect_mom_half
+            (PyArray_PartitionFunc *)&quickselect_half,
+            (PyArray_PartitionFunc *)&quickselect_mom_half
         },
         {
-            &aquickselect_half,
-            &aquickselect_mom_half
+            (PyArray_ArgPartitionFunc *)&aquickselect_half,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_half
         }
     },
 
@@ -430,12 +430,12 @@ static part_map _part_map[] = {
     {
         NPY_FLOAT,
         {
-            &quickselect_float, 
-            &quickselect_mom_float
+            (PyArray_PartitionFunc *)&quickselect_float,
+            (PyArray_PartitionFunc *)&quickselect_mom_float
         },
         {
-            &aquickselect_float,
-            &aquickselect_mom_float
+            (PyArray_ArgPartitionFunc *)&aquickselect_float,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_float
         }
     },
 
@@ -443,12 +443,12 @@ static part_map _part_map[] = {
     {
         NPY_DOUBLE,
         {
-            &quickselect_double, 
-            &quickselect_mom_double
+            (PyArray_PartitionFunc *)&quickselect_double,
+            (PyArray_PartitionFunc *)&quickselect_mom_double
         },
         {
-            &aquickselect_double,
-            &aquickselect_mom_double
+            (PyArray_ArgPartitionFunc *)&aquickselect_double,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_double
         }
     },
 
@@ -456,12 +456,12 @@ static part_map _part_map[] = {
     {
         NPY_LONGDOUBLE,
         {
-            &quickselect_longdouble, 
-            &quickselect_mom_longdouble
+            (PyArray_PartitionFunc *)&quickselect_longdouble,
+            (PyArray_PartitionFunc *)&quickselect_mom_longdouble
         },
         {
-            &aquickselect_longdouble,
-            &aquickselect_mom_longdouble
+            (PyArray_ArgPartitionFunc *)&aquickselect_longdouble,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_longdouble
         }
     },
 
@@ -469,12 +469,12 @@ static part_map _part_map[] = {
     {
         NPY_CFLOAT,
         {
-            &quickselect_cfloat, 
-            &quickselect_mom_cfloat
+            (PyArray_PartitionFunc *)&quickselect_cfloat,
+            (PyArray_PartitionFunc *)&quickselect_mom_cfloat
         },
         {
-            &aquickselect_cfloat,
-            &aquickselect_mom_cfloat
+            (PyArray_ArgPartitionFunc *)&aquickselect_cfloat,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_cfloat
         }
     },
 
@@ -482,12 +482,12 @@ static part_map _part_map[] = {
     {
         NPY_CDOUBLE,
         {
-            &quickselect_cdouble, 
-            &quickselect_mom_cdouble
+            (PyArray_PartitionFunc *)&quickselect_cdouble,
+            (PyArray_PartitionFunc *)&quickselect_mom_cdouble
         },
         {
-            &aquickselect_cdouble,
-            &aquickselect_mom_cdouble
+            (PyArray_ArgPartitionFunc *)&aquickselect_cdouble,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_cdouble
         }
     },
 
@@ -495,12 +495,12 @@ static part_map _part_map[] = {
     {
         NPY_CLONGDOUBLE,
         {
-            &quickselect_clongdouble, 
-            &quickselect_mom_clongdouble
+            (PyArray_PartitionFunc *)&quickselect_clongdouble,
+            (PyArray_PartitionFunc *)&quickselect_mom_clongdouble
         },
         {
-            &aquickselect_clongdouble,
-            &aquickselect_mom_clongdouble
+            (PyArray_ArgPartitionFunc *)&aquickselect_clongdouble,
+            (PyArray_ArgPartitionFunc *)&aquickselect_mom_clongdouble
         }
     },
 
