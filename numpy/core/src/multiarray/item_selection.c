@@ -769,16 +769,17 @@ PyArray_Choose(PyArrayObject *ip, PyObject *op, PyArrayObject *out,
  * over all but the desired sorting axis.
  */
 static int
-_new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
-              NPY_SELECTKIND pwhich, NPY_SORTKIND swhich,
-              int is_sort)
+_new_sortlike(PyArrayObject *op, int axis,
+              NPY_SORTKIND swhich,
+              PyArray_PartitionFunc * part, npy_intp kth,
+              NPY_SELECTKIND pwhich,
+              npy_intp * pivots, npy_intp * npiv)
 {
     PyArrayIterObject *it;
     int needcopy = 0, swap;
     npy_intp N, size;
     int elsize;
     npy_intp astride;
-    PyArray_PartitionFunc *part = NULL;
     PyArray_SortFunc *sort = NULL;
     NPY_BEGIN_THREADS_DEF;
 
@@ -789,12 +790,10 @@ _new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
     }
 
     NPY_BEGIN_THREADS_DESCR(PyArray_DESCR(op));
-    if (is_sort) {
+    if (part == NULL) {
         sort = PyArray_DESCR(op)->f->sort[swhich];
     }
-    else {
-        part = get_partition_func(PyArray_TYPE(op), pwhich);
-    }
+
     size = it->size;
     N = PyArray_DIMS(op)[axis];
     elsize = PyArray_DESCR(op)->elsize;
@@ -814,14 +813,14 @@ _new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
             if (swap) {
                 _strided_byte_swap(buffer, (npy_intp) elsize, N, elsize);
             }
-            if (sort) {
+            if (part == NULL) {
                 if (sort(buffer, N, op) < 0) {
                     PyDataMem_FREE(buffer);
                     goto fail;
                 }
             }
             else {
-                if (part(buffer, N, kth, NULL, NULL, op) < 0) {
+                if (part(buffer, N, kth, pivots, npiv, op) < 0) {
                     PyDataMem_FREE(buffer);
                     goto fail;
                 }
@@ -837,13 +836,13 @@ _new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
     }
     else {
         while (size--) {
-            if (sort) {
+            if (part == NULL) {
                 if (sort(it->dataptr, N, op) < 0) {
                     goto fail;
                 }
             }
             else {
-                if (part(it->dataptr, N, kth, NULL, NULL, op) < 0) {
+                if (part(it->dataptr, N, kth, pivots, npiv, op) < 0) {
                     goto fail;
                 }
             }
@@ -863,9 +862,11 @@ _new_sorttype(PyArrayObject *op, npy_intp kth, int axis,
 }
 
 static PyObject*
-_new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
-                 NPY_SELECTKIND pwhich, NPY_SORTKIND swhich,
-                 int is_sort)
+_new_argsortlike(PyArrayObject *op, int axis,
+                 NPY_SORTKIND swhich,
+                 PyArray_ArgPartitionFunc * argpart,
+                 npy_intp kth, NPY_SELECTKIND pwhich,
+                 npy_intp * pivots, npy_intp * npiv)
 {
 
     PyArrayIterObject *it = NULL;
@@ -876,7 +877,6 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
     int elsize;
     int needcopy = 0, swap;
     PyArray_ArgSortFunc *argsort = NULL;
-    PyArray_ArgPartitionFunc *argpart = NULL;
     NPY_BEGIN_THREADS_DEF;
 
     ret = (PyArrayObject *)PyArray_New(Py_TYPE(op),
@@ -895,7 +895,7 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
     swap = !PyArray_ISNOTSWAPPED(op);
 
     NPY_BEGIN_THREADS_DESCR(PyArray_DESCR(op));
-    if (is_sort) {
+    if (argpart == NULL) {
         argsort = PyArray_DESCR(op)->f->argsort[swhich];
     }
     else {
@@ -932,7 +932,7 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
             for (i = 0; i < N; i++) {
                 *iptr++ = i;
             }
-            if (argsort) {
+            if (argpart == NULL) {
                 if (argsort(valbuffer, (npy_intp *)indbuffer, N, op) < 0) {
                     PyDataMem_FREE(valbuffer);
                     PyDataMem_FREE(indbuffer);
@@ -941,7 +941,7 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
             }
             else {
                 if (argpart(valbuffer, (npy_intp *)indbuffer,
-                            N, kth, NULL, NULL, op) < 0) {
+                            N, kth, pivots, npiv, op) < 0) {
                     PyDataMem_FREE(valbuffer);
                     PyDataMem_FREE(indbuffer);
                     goto fail;
@@ -961,7 +961,7 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
             for (i = 0; i < N; i++) {
                 *iptr++ = i;
             }
-            if (argsort) {
+            if (argpart == NULL) {
                 if (argsort(it->dataptr, (npy_intp *)rit->dataptr,
                             N, op) < 0) {
                     goto fail;
@@ -969,7 +969,7 @@ _new_argsorttype(PyArrayObject *op, npy_intp kth, int axis,
             }
             else {
                 if (argpart(it->dataptr, (npy_intp *)rit->dataptr,
-                            N, kth, NULL, NULL, op) < 0) {
+                            N, kth, pivots, npiv, op) < 0) {
                     goto fail;
                 }
             }
@@ -1086,7 +1086,7 @@ PyArray_Sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
 
     /* Determine if we should use type-specific algorithm or not */
     if (PyArray_DESCR(op)->f->sort[which] != NULL) {
-        return _new_sorttype(op, 0, axis, 0, which, 1);
+        return _new_sortlike(op, axis, which, NULL, 0, 0, NULL, NULL);
     }
 
     if (PyArray_DESCR(op)->f->compare == NULL) {
@@ -1164,21 +1164,64 @@ PyArray_Sort(PyArrayObject *op, int axis, NPY_SORTKIND which)
 }
 
 
+/*
+ * make kth array positive, ravel and sort it
+ */
+static PyArrayObject *
+partition_prep_kth_array(PyArrayObject * ktharray,
+                         PyArrayObject * op,
+                         int axis)
+{
+    const npy_intp * shape = PyArray_SHAPE(op);
+    PyArrayObject * kthrvl;
+    npy_intp * kth;
+    npy_intp nkth, i;
+
+    kthrvl = (PyArrayObject *)PyArray_Ravel(ktharray, NPY_KEEPORDER);
+    if (kthrvl == NULL)
+        return NULL;
+
+    /*
+     * sort the array of kths so the partitions will
+     * not trample on each other
+     */
+    PyArray_Sort(kthrvl, -1, NPY_QUICKSORT);
+
+    kth = PyArray_DATA(kthrvl);
+    nkth = PyArray_SIZE(kthrvl);
+
+    for (i = 0; i < nkth; i++) {
+        if (kth[i] < 0) {
+            kth[i] += shape[axis];
+        }
+        if (PyArray_SIZE(op) != 0 && ((kth[i] < 0) || (kth[i] >= shape[axis]))) {
+            PyErr_Format(PyExc_ValueError, "kth(=%zd) out of bounds (%zd)",
+                         kth[i], shape[axis]);
+            Py_XDECREF(kthrvl);
+            return NULL;
+        }
+    }
+
+    return kthrvl;
+}
+
+
+
 /*NUMPY_API
  * Partition an array in-place
  */
 NPY_NO_EXPORT int
-PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND which)
+PyArray_Partition(PyArrayObject *op, PyArrayObject * ktharray, int axis, NPY_SELECTKIND which)
 {
     PyArrayObject *ap = NULL, *store_arr = NULL;
     char *ip;
-    npy_intp i, n, m, *shape;
+    npy_intp i, n, m;
     int elsize, orign;
     int res = 0;
     int axis_orig = axis;
     int (*sort)(void *, size_t, size_t, npy_comparator);
+    PyArray_PartitionFunc * part = get_partition_func(PyArray_TYPE(op), which);
 
-    shape = PyArray_SHAPE(op);
     n = PyArray_NDIM(op);
     if ((n == 0)) {
         return 0;
@@ -1190,23 +1233,36 @@ PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND whic
         PyErr_Format(PyExc_ValueError, "axis(=%d) out of bounds", axis_orig);
         return -1;
     }
-    if (kth < 0) {
-        kth += shape[axis];
-    }
-    if (PyArray_SIZE(op) != 0 && ((kth < 0) || (kth >= shape[axis]))) {
-        PyErr_Format(PyExc_ValueError, "kth(=%zd) out of bounds (%zd)",
-                     kth, shape[axis]);
-        return -1;
-    }
     if (PyArray_FailUnlessWriteable(op, "sort array") < 0) {
         return -1;
     }
 
-    /* FIXME */
-    /* Determine if we should use type-specific algorithm or not */
-    if (get_partition_func(PyArray_TYPE(op), which) != NULL) {
-        return _new_sorttype(op, kth, axis, which, 0, 0);
+    if (part) {
+        npy_intp pivots[NPY_MAX_PIVOT_STACK];
+        npy_intp npiv = 0;
+        npy_intp * data;
+        npy_intp nkth;
+
+        PyArrayObject * kthrvl = partition_prep_kth_array(ktharray, op, axis);
+        if (kthrvl == NULL)
+            return -1;
+
+        data = PyArray_DATA(kthrvl);
+        nkth = PyArray_SIZE(kthrvl);
+
+        for (i = 0; i < nkth; i++) {
+            /* pivots only supported for 1-D for now */
+            res = _new_sortlike(op, axis, 0,
+                                part, data[i], which,
+                                n == 1 && nkth > 1 ? pivots : NULL, &npiv);
+            if (res < 0)
+                break;
+        }
+
+        Py_DECREF(kthrvl);
+        return res;
     }
+
 
     if (PyArray_DESCR(op)->f->compare == NULL) {
         PyErr_SetString(PyExc_TypeError,
@@ -1214,6 +1270,7 @@ PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND whic
         return -1;
     }
 
+    /* FIXME */
     switch (which) {
         case NPY_INTROSELECT :
             sort = npy_introselect;
@@ -1324,7 +1381,8 @@ PyArray_ArgSort(PyArrayObject *op, int axis, NPY_SORTKIND which)
     }
     /* Determine if we should use new algorithm or not */
     if (PyArray_DESCR(op2)->f->argsort[which] != NULL) {
-        ret = (PyArrayObject *)_new_argsorttype(op2, 0, axis, 0, which, 1);
+        ret = (PyArrayObject *)_new_argsortlike(op2, axis, which,
+                                                NULL, 0, 0, NULL, NULL);
         Py_DECREF(op2);
         return (PyObject *)ret;
     }
@@ -1422,15 +1480,17 @@ PyArray_ArgSort(PyArrayObject *op, int axis, NPY_SORTKIND which)
  * ArgPartition an array
  */
 NPY_NO_EXPORT PyObject *
-PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND which)
+PyArray_ArgPartition(PyArrayObject *op, PyArrayObject * ktharray, int axis, NPY_SELECTKIND which)
 {
     PyArrayObject *ap = NULL, *ret = NULL, *store, *op2;
     npy_intp *ip;
-    npy_intp i, j, n, m, orign, *shape;
+    npy_intp i, j, n, m, orign;
     int argsort_elsize;
     char *store_ptr;
     int res = 0;
     int (*sort)(void *, size_t, size_t, npy_comparator);
+    PyArray_ArgPartitionFunc * argpart =
+        get_argpartition_func(PyArray_TYPE(op), which);
 
     n = PyArray_NDIM(op);
     if ((n == 0) || (PyArray_SIZE(op) == 1)) {
@@ -1450,19 +1510,35 @@ PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND w
     if ((op2=(PyArrayObject *)PyArray_CheckAxis(op, &axis, 0)) == NULL) {
         return NULL;
     }
-    shape = PyArray_SHAPE(op2);
-    if (kth < 0) {
-        kth += shape[axis];
-    }
-    if (PyArray_SIZE(op2) != 0 && ((kth < 0) || (kth >= shape[axis]))) {
-        PyErr_Format(PyExc_ValueError, "kth(=%zd) out of bounds (%zd)",
-                     kth, shape[axis]);
-        return NULL;
-    }
 
     /* Determine if we should use new algorithm or not */
-    if (get_argpartition_func(PyArray_TYPE(op), which) != NULL) {
-        ret = (PyArrayObject *)_new_argsorttype(op2, kth, axis, which, 0, 0);
+    if (argpart) {
+        npy_intp pivots[50];
+        npy_intp npiv = 0;
+        npy_intp * data;
+        npy_intp nkth;
+
+        PyArrayObject * kthrvl = partition_prep_kth_array(ktharray, op2, axis);
+        if (kthrvl == NULL) {
+            Py_DECREF(op2);
+            return NULL;
+        }
+
+        data = PyArray_DATA(kthrvl);
+        nkth = PyArray_SIZE(kthrvl);
+
+        for (i = 0; i < nkth; i++) {
+            /* pivots only supported for 1-D for now */
+            ret = (PyArrayObject *)_new_argsortlike(op2, axis, 0,
+                                                    argpart, data[i], which,
+                                                    n == 1 && nkth > 1 ?
+                                                    pivots : NULL,
+                                                    &npiv);
+            if (ret == NULL)
+                break;
+        }
+
+        Py_DECREF(kthrvl);
         Py_DECREF(op2);
         return (PyObject *)ret;
     }

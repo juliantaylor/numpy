@@ -1174,20 +1174,23 @@ array_partition(PyArrayObject *self, PyObject *args, PyObject *kwds)
 {
     int axis=-1;
     int val;
-    Py_ssize_t kth;
     NPY_SELECTKIND sortkind = NPY_INTROSELECT;
     PyObject *order = NULL;
     PyArray_Descr *saved = NULL;
     PyArray_Descr *newd;
     static char *kwlist[] = {"kth", "axis", "kind", "order", NULL};
+    PyArrayObject * ktharray;
+    PyObject * kthobj;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|iO&O", kwlist,
-                                     &kth,
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|iO&O", kwlist,
+                                     &kthobj,
                                      &axis,
                                      PyArray_SelectkindConverter, &sortkind,
                                      &order)) {
         return NULL;
     }
+
     if (order == Py_None) {
         order = NULL;
     }
@@ -1216,7 +1219,14 @@ array_partition(PyArrayObject *self, PyObject *args, PyObject *kwds)
         ((PyArrayObject_fields *)self)->descr = newd;
     }
 
-    val = PyArray_Partition(self, (npy_intp)kth, axis, sortkind);
+    ktharray = (PyArrayObject *)PyArray_ContiguousFromAny(kthobj, NPY_INTP,
+                                                          0, 1);
+    if (ktharray == NULL)
+        return NULL;
+
+    val = PyArray_Partition(self, ktharray, axis, sortkind);
+    Py_DECREF(ktharray);
+
     if (order != NULL) {
         Py_XDECREF(PyArray_DESCR(self));
         ((PyArrayObject_fields *)self)->descr = saved;
@@ -1283,14 +1293,15 @@ static PyObject *
 array_argpartition(PyArrayObject *self, PyObject *args, PyObject *kwds)
 {
     int axis = -1;
-    Py_ssize_t kth;
     NPY_SELECTKIND sortkind = NPY_INTROSELECT;
     PyObject *order = NULL, *res;
     PyArray_Descr *newd, *saved=NULL;
     static char *kwlist[] = {"kth", "axis", "kind", "order", NULL};
+    PyObject * kthobj;
+    PyArrayObject * ktharray;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|O&O&O", kwlist,
-                                     &kth,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O&O&O", kwlist,
+                                     &kthobj,
                                      PyArray_AxisConverter, &axis,
                                      PyArray_SelectkindConverter, &sortkind,
                                      &order)) {
@@ -1323,7 +1334,14 @@ array_argpartition(PyArrayObject *self, PyObject *args, PyObject *kwds)
         ((PyArrayObject_fields *)self)->descr = newd;
     }
 
-    res = PyArray_ArgPartition(self, kth, axis, sortkind);
+    ktharray = (PyArrayObject *)PyArray_ContiguousFromAny(kthobj, NPY_INTP,
+                                                          0, 1);
+    if (ktharray == NULL)
+        return NULL;
+
+    res = PyArray_ArgPartition(self, ktharray, axis, sortkind);
+    Py_DECREF(ktharray);
+
     if (order != NULL) {
         Py_XDECREF(PyArray_DESCR(self));
         ((PyArrayObject_fields *)self)->descr = saved;

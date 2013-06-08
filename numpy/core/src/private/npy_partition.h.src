@@ -24,10 +24,7 @@
 #include <numpy/npy_common.h>
 #include <numpy/ndarraytypes.h>
 
-#define NPY_ENOMEM 1
-#define NPY_ECOMP 2
-
-
+#define NPY_MAX_PIVOT_STACK 50
 
 
 /**begin repeat
