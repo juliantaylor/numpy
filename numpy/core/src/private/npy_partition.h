@@ -41,227 +41,229 @@
 
 #line 46
 
-int quickselect_bool(npy_bool *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_bool(npy_bool *v, npy_intp* tosort, npy_intp num,
+int introselect_bool(npy_bool *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_bool(npy_bool *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_bool(npy_bool *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_bool(npy_bool *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_bool(npy_bool *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_bool(npy_bool *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_byte(npy_byte *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_byte(npy_byte *v, npy_intp* tosort, npy_intp num,
+int introselect_byte(npy_byte *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_byte(npy_byte *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_byte(npy_byte *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_byte(npy_byte *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_byte(npy_byte *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_byte(npy_byte *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_ubyte(npy_ubyte *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_ubyte(npy_ubyte *v, npy_intp* tosort, npy_intp num,
+int introselect_ubyte(npy_ubyte *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_ubyte(npy_ubyte *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_ubyte(npy_ubyte *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_ubyte(npy_ubyte *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_ubyte(npy_ubyte *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_ubyte(npy_ubyte *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_short(npy_short *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_short(npy_short *v, npy_intp* tosort, npy_intp num,
+int introselect_short(npy_short *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_short(npy_short *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_short(npy_short *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_short(npy_short *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_short(npy_short *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_short(npy_short *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_ushort(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_ushort(npy_ushort *v, npy_intp* tosort, npy_intp num,
+int introselect_ushort(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_ushort(npy_ushort *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_ushort(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_ushort(npy_ushort *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_ushort(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_ushort(npy_ushort *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_int(npy_int *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_int(npy_int *v, npy_intp* tosort, npy_intp num,
+int introselect_int(npy_int *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_int(npy_int *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_int(npy_int *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_int(npy_int *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_int(npy_int *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_int(npy_int *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_uint(npy_uint *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_uint(npy_uint *v, npy_intp* tosort, npy_intp num,
+int introselect_uint(npy_uint *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_uint(npy_uint *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_uint(npy_uint *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_uint(npy_uint *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_uint(npy_uint *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_uint(npy_uint *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_long(npy_long *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_long(npy_long *v, npy_intp* tosort, npy_intp num,
+int introselect_long(npy_long *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_long(npy_long *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_long(npy_long *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_long(npy_long *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_long(npy_long *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_long(npy_long *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_ulong(npy_ulong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_ulong(npy_ulong *v, npy_intp* tosort, npy_intp num,
+int introselect_ulong(npy_ulong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_ulong(npy_ulong *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_ulong(npy_ulong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_ulong(npy_ulong *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_ulong(npy_ulong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_ulong(npy_ulong *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_longlong(npy_longlong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_longlong(npy_longlong *v, npy_intp* tosort, npy_intp num,
+int introselect_longlong(npy_longlong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_longlong(npy_longlong *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_longlong(npy_longlong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_longlong(npy_longlong *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_longlong(npy_longlong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_longlong(npy_longlong *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_ulonglong(npy_ulonglong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_ulonglong(npy_ulonglong *v, npy_intp* tosort, npy_intp num,
+int introselect_ulonglong(npy_ulonglong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_ulonglong(npy_ulonglong *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_ulonglong(npy_ulonglong *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_ulonglong(npy_ulonglong *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_ulonglong(npy_ulonglong *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_ulonglong(npy_ulonglong *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_half(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_half(npy_ushort *v, npy_intp* tosort, npy_intp num,
+int introselect_half(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_half(npy_ushort *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_half(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_half(npy_ushort *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_half(npy_ushort *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_half(npy_ushort *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_float(npy_float *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_float(npy_float *v, npy_intp* tosort, npy_intp num,
+int introselect_float(npy_float *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_float(npy_float *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_float(npy_float *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_float(npy_float *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_float(npy_float *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_float(npy_float *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_double(npy_double *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_double(npy_double *v, npy_intp* tosort, npy_intp num,
+int introselect_double(npy_double *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_double(npy_double *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_double(npy_double *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_double(npy_double *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_double(npy_double *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_double(npy_double *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_longdouble(npy_longdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_longdouble(npy_longdouble *v, npy_intp* tosort, npy_intp num,
+int introselect_longdouble(npy_longdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_longdouble(npy_longdouble *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_longdouble(npy_longdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_longdouble(npy_longdouble *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_longdouble(npy_longdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_longdouble(npy_longdouble *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_cfloat(npy_cfloat *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_cfloat(npy_cfloat *v, npy_intp* tosort, npy_intp num,
+int introselect_cfloat(npy_cfloat *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_cfloat(npy_cfloat *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_cfloat(npy_cfloat *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_cfloat(npy_cfloat *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_cfloat(npy_cfloat *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_cfloat(npy_cfloat *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_cdouble(npy_cdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_cdouble(npy_cdouble *v, npy_intp* tosort, npy_intp num,
+int introselect_cdouble(npy_cdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_cdouble(npy_cdouble *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_cdouble(npy_cdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_cdouble(npy_cdouble *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_cdouble(npy_cdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_cdouble(npy_cdouble *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 #line 46
 
-int quickselect_clongdouble(npy_clongdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_clongdouble(npy_clongdouble *v, npy_intp* tosort, npy_intp num,
+int introselect_clongdouble(npy_clongdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_clongdouble(npy_clongdouble *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_clongdouble(npy_clongdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_clongdouble(npy_clongdouble *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_clongdouble(npy_clongdouble *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_clongdouble(npy_clongdouble *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 
 
-int quickselect_string(npy_char *vec, npy_intp cnt, PyArrayObject *arr);
-int aquickselect_string(npy_char *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
+int introselect_string(npy_char *vec, npy_intp cnt, PyArrayObject *arr);
+int aintroselect_string(npy_char *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
 
 
-int quickselect_unicode(npy_ucs4 *vec, npy_intp cnt, PyArrayObject *arr);
-int aquickselect_unicode(npy_ucs4 *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
+int introselect_unicode(npy_ucs4 *vec, npy_intp cnt, PyArrayObject *arr);
+int aintroselect_unicode(npy_ucs4 *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
+
+int npy_introselect(void *base, size_t num, size_t size, size_t kth, npy_comparator cmp);
 
 typedef struct {
     enum NPY_TYPES typenum;
@@ -270,237 +272,201 @@ typedef struct {
 } part_map;
 
 static part_map _part_map[] = {
-#line 85
+#line 87
     {
         NPY_BOOL,
         {
-            (PyArray_PartitionFunc *)&quickselect_bool,
-            (PyArray_PartitionFunc *)&quickselect_mom_bool
+            (PyArray_PartitionFunc *)&introselect_bool,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_bool,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_bool
+            (PyArray_ArgPartitionFunc *)&aintroselect_bool,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_BYTE,
         {
-            (PyArray_PartitionFunc *)&quickselect_byte,
-            (PyArray_PartitionFunc *)&quickselect_mom_byte
+            (PyArray_PartitionFunc *)&introselect_byte,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_byte,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_byte
+            (PyArray_ArgPartitionFunc *)&aintroselect_byte,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_UBYTE,
         {
-            (PyArray_PartitionFunc *)&quickselect_ubyte,
-            (PyArray_PartitionFunc *)&quickselect_mom_ubyte
+            (PyArray_PartitionFunc *)&introselect_ubyte,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_ubyte,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_ubyte
+            (PyArray_ArgPartitionFunc *)&aintroselect_ubyte,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_SHORT,
         {
-            (PyArray_PartitionFunc *)&quickselect_short,
-            (PyArray_PartitionFunc *)&quickselect_mom_short
+            (PyArray_PartitionFunc *)&introselect_short,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_short,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_short
+            (PyArray_ArgPartitionFunc *)&aintroselect_short,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_USHORT,
         {
-            (PyArray_PartitionFunc *)&quickselect_ushort,
-            (PyArray_PartitionFunc *)&quickselect_mom_ushort
+            (PyArray_PartitionFunc *)&introselect_ushort,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_ushort,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_ushort
+            (PyArray_ArgPartitionFunc *)&aintroselect_ushort,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_INT,
         {
-            (PyArray_PartitionFunc *)&quickselect_int,
-            (PyArray_PartitionFunc *)&quickselect_mom_int
+            (PyArray_PartitionFunc *)&introselect_int,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_int,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_int
+            (PyArray_ArgPartitionFunc *)&aintroselect_int,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_UINT,
         {
-            (PyArray_PartitionFunc *)&quickselect_uint,
-            (PyArray_PartitionFunc *)&quickselect_mom_uint
+            (PyArray_PartitionFunc *)&introselect_uint,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_uint,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_uint
+            (PyArray_ArgPartitionFunc *)&aintroselect_uint,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_LONG,
         {
-            (PyArray_PartitionFunc *)&quickselect_long,
-            (PyArray_PartitionFunc *)&quickselect_mom_long
+            (PyArray_PartitionFunc *)&introselect_long,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_long,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_long
+            (PyArray_ArgPartitionFunc *)&aintroselect_long,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_ULONG,
         {
-            (PyArray_PartitionFunc *)&quickselect_ulong,
-            (PyArray_PartitionFunc *)&quickselect_mom_ulong
+            (PyArray_PartitionFunc *)&introselect_ulong,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_ulong,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_ulong
+            (PyArray_ArgPartitionFunc *)&aintroselect_ulong,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_LONGLONG,
         {
-            (PyArray_PartitionFunc *)&quickselect_longlong,
-            (PyArray_PartitionFunc *)&quickselect_mom_longlong
+            (PyArray_PartitionFunc *)&introselect_longlong,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_longlong,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_longlong
+            (PyArray_ArgPartitionFunc *)&aintroselect_longlong,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_ULONGLONG,
         {
-            (PyArray_PartitionFunc *)&quickselect_ulonglong,
-            (PyArray_PartitionFunc *)&quickselect_mom_ulonglong
+            (PyArray_PartitionFunc *)&introselect_ulonglong,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_ulonglong,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_ulonglong
+            (PyArray_ArgPartitionFunc *)&aintroselect_ulonglong,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_HALF,
         {
-            (PyArray_PartitionFunc *)&quickselect_half,
-            (PyArray_PartitionFunc *)&quickselect_mom_half
+            (PyArray_PartitionFunc *)&introselect_half,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_half,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_half
+            (PyArray_ArgPartitionFunc *)&aintroselect_half,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_FLOAT,
         {
-            (PyArray_PartitionFunc *)&quickselect_float,
-            (PyArray_PartitionFunc *)&quickselect_mom_float
+            (PyArray_PartitionFunc *)&introselect_float,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_float,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_float
+            (PyArray_ArgPartitionFunc *)&aintroselect_float,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_DOUBLE,
         {
-            (PyArray_PartitionFunc *)&quickselect_double,
-            (PyArray_PartitionFunc *)&quickselect_mom_double
+            (PyArray_PartitionFunc *)&introselect_double,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_double,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_double
+            (PyArray_ArgPartitionFunc *)&aintroselect_double,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_LONGDOUBLE,
         {
-            (PyArray_PartitionFunc *)&quickselect_longdouble,
-            (PyArray_PartitionFunc *)&quickselect_mom_longdouble
+            (PyArray_PartitionFunc *)&introselect_longdouble,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_longdouble,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_longdouble
+            (PyArray_ArgPartitionFunc *)&aintroselect_longdouble,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_CFLOAT,
         {
-            (PyArray_PartitionFunc *)&quickselect_cfloat,
-            (PyArray_PartitionFunc *)&quickselect_mom_cfloat
+            (PyArray_PartitionFunc *)&introselect_cfloat,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_cfloat,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_cfloat
+            (PyArray_ArgPartitionFunc *)&aintroselect_cfloat,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_CDOUBLE,
         {
-            (PyArray_PartitionFunc *)&quickselect_cdouble,
-            (PyArray_PartitionFunc *)&quickselect_mom_cdouble
+            (PyArray_PartitionFunc *)&introselect_cdouble,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_cdouble,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_cdouble
+            (PyArray_ArgPartitionFunc *)&aintroselect_cdouble,
         }
     },
 
-#line 85
+#line 87
     {
         NPY_CLONGDOUBLE,
         {
-            (PyArray_PartitionFunc *)&quickselect_clongdouble,
-            (PyArray_PartitionFunc *)&quickselect_mom_clongdouble
+            (PyArray_PartitionFunc *)&introselect_clongdouble,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_clongdouble,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_clongdouble
+            (PyArray_ArgPartitionFunc *)&aintroselect_clongdouble,
         }
     },
 

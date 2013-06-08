@@ -414,7 +414,7 @@ PyArray_SelectkindConverter(PyObject *obj, NPY_SELECTKIND *selectkind)
         obj = tmp = PyUnicode_AsASCIIString(obj);
     }
 
-    *selectkind = NPY_QUICKSELECT;
+    *selectkind = NPY_INTROSELECT;
     str = PyBytes_AsString(obj);
     if (!str) {
         Py_XDECREF(tmp);
@@ -426,11 +426,8 @@ PyArray_SelectkindConverter(PyObject *obj, NPY_SELECTKIND *selectkind)
         Py_XDECREF(tmp);
         return NPY_FAIL;
     }
-    if (strcmp(str, "quickselect") == 0) {
-        *selectkind = NPY_QUICKSELECT;
-    }
-    else if (strcmp(str, "medianofmedian5") == 0) {
-        *selectkind = NPY_MEDOFMED5;
+    if (strcmp(str, "introselect") == 0) {
+        *selectkind = NPY_INTROSELECT;
     }
     else {
         PyErr_Format(PyExc_ValueError,

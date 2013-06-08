@@ -156,10 +156,9 @@ typedef enum {
 
 
 typedef enum {
-        NPY_QUICKSELECT=0,
-        NPY_MEDOFMED5=1,
+        NPY_INTROSELECT=0,
 } NPY_SELECTKIND;
-#define NPY_NSELECTS (NPY_MEDOFMED5 + 1)
+#define NPY_NSELECTS (NPY_INTROSELECT + 1)
 
 
 typedef enum {

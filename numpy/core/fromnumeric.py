@@ -535,7 +535,7 @@ def transpose(a, axes=None):
     return transpose(axes)
 
 
-def partition(a, kth, axis=-1, kind='quickselect', order=None):
+def partition(a, kth, axis=-1, kind='introselect', order=None):
     """
     Return a partitioned copy of an array.
 
@@ -557,8 +557,8 @@ def partition(a, kth, axis=-1, kind='quickselect', order=None):
     axis : int or None, optional
         Axis along which to sort. If None, the array is flattened before
         sorting. The default is -1, which sorts along the last axis.
-    kind : {'quickselect', 'medianofmedian5}, optional
-        Selection algorithm. Default is 'quicksort'.
+    kind : {'introselect'}, optional
+        Selection algorithm. Default is 'introselect'.
     order : list, optional
         When `a` is a structured array, this argument specifies which fields
         to compare first, second, and so on.  This list does not need to
@@ -584,8 +584,7 @@ def partition(a, kth, axis=-1, kind='quickselect', order=None):
     ================= ======= ============= ============ =======
        kind            speed   worst case    work space  stable
     ================= ======= ============= ============ =======
-    'quickselect'        1       O(n^2)          0          no
-    'medianofmedian5'    2       O(n)            0          no
+    'introselect'        1       O(n)            0          no
     ================= ======= ============= ============ =======
 
     All the partition algorithms make temporary copies of the data when
@@ -614,7 +613,7 @@ def partition(a, kth, axis=-1, kind='quickselect', order=None):
     return a
 
 
-def argpartition(a, kth, axis=-1, kind='quickselect', order=None):
+def argpartition(a, kth, axis=-1, kind='instroselect', order=None):
     """
     Perform an indirect partition along the given axis using the algorithm
     specified by the `kind` keyword. It returns an array of indices of the
@@ -633,8 +632,8 @@ def argpartition(a, kth, axis=-1, kind='quickselect', order=None):
     axis : int or None, optional
         Axis along which to sort.  The default is -1 (the last axis). If None,
         the flattened array is used.
-    kind : {'quickselect', 'medianofmedian5'}, optional
-        Selection algorithm. Default is 'quickselect'
+    kind : {'introselect'}, optional
+        Selection algorithm. Default is 'introselect'
     order : list, optional
         When `a` is an array with fields defined, this argument specifies
         which fields to compare first, second, etc.  Not all fields need be

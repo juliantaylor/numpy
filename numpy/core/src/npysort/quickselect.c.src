@@ -15,6 +15,7 @@
 
 #include "npy_sort.h"
 #include "npysort_common.h"
+#include "numpy/npy_math.h"
 #include <stdlib.h>
 
 #define NOT_USED NPY_UNUSED(unused)
@@ -40,12 +41,13 @@
  *         npy_ushort, npy_float, npy_double, npy_longdouble, npy_cfloat,
  *         npy_cdouble, npy_clongdouble#
  */
+
 int
-quickselect_mom_@suff@(@type@ *v, npy_intp num, npy_intp kth,
-                       void *NOT_USED);
+introselect_@suff@(@type@ *v, npy_intp num, npy_intp kth,
+                   void *NOT_USED);
 int
-aquickselect_mom_@suff@(@type@ *v, npy_intp * tosort, npy_intp num,
-                        npy_intp kth, void *NOT_USED);
+aintroselect_@suff@(@type@ *v, npy_intp * tosort, npy_intp num,
+                    npy_intp kth, void *NOT_USED);
 
 static npy_intp
 amedian_of_median5_@suff@(@type@ *v, npy_intp* tosort, const npy_intp num);
@@ -68,8 +70,8 @@ median_of_median5_@suff@(@type@ *v, const npy_intp num);
         amedian5_@suff@(v, tosort + subleft)
 #define UNGUARDED_PARTITION(v, tosort, pivot, ll, hh) \
         aunguarded_partition_@suff@(v, tosort, pivot, ll, hh)
-#define QUICKSELECT_MOM(v, tosort, num, kth) \
-        aquickselect_mom_@suff@(v, tosort, nmed, nmed / 2, NULL)
+#define INTROSELECT(v, tosort, num, kth) \
+        aintroselect_@suff@(v, tosort, nmed, nmed / 2, NULL)
 #else
 #define IDX(x) (x)
 #define SORTEE(x) v[x]
@@ -80,8 +82,8 @@ median_of_median5_@suff@(@type@ *v, const npy_intp num);
         median5_@suff@(v + subleft)
 #define UNGUARDED_PARTITION(v, tosort, pivot, ll, hh) \
         unguarded_partition_@suff@(v, pivot, ll, hh)
-#define QUICKSELECT_MOM(v, tosort, num, kth) \
-        quickselect_mom_@suff@(v, nmed, nmed / 2, NULL)
+#define INTROSELECT(v, tosort, num, kth) \
+        introselect_@suff@(v, nmed, nmed / 2, NULL)
 #endif
 
 
@@ -193,35 +195,37 @@ static npy_intp
     }
 
     if (nmed > 2)
-        QUICKSELECT_MOM(v, tosort, nmed, nmed / 2);
+        INTROSELECT(v, tosort, nmed, nmed / 2);
     return nmed / 2;
 }
 
 
-/**begin repeat2
- * #alg = , _mom#
- * #mom = 0, 1#
- */
-
 int
-@name@quickselect@alg@_@suff@(@type@ *v,
+@name@introselect_@suff@(@type@ *v,
 #if @arg@
-                              npy_intp* tosort,
+                         npy_intp* tosort,
 #endif
-                              npy_intp num, npy_intp kth, void *NOT_USED)
+                         npy_intp num, npy_intp kth, void *NOT_USED)
 {
     npy_intp low  = 0;
     npy_intp high = num - 1;
+    npy_intp depth_limit = npy_log2(num) * 2;
 
     /* guarantee three elements */
     /* FIXME: add test for this */
     for (;low + 1 < high;) {
         npy_intp       ll = low + 1;
         npy_intp       hh = high;
-#if @mom@
-        /* required to do unguarded partition */
-        if (hh - ll < 5) {
+
+        /*
+         * if we aren't making sufficient progress with median of 3
+         * fall back to median-of-median5 pivot for linear worst case
+         * med3 for small sizes is required to do unguarded partition
+         */
+        if (depth_limit > 0 || hh - ll < 5) {
             const npy_intp mid = low + (high - low) / 2;
+            /* median of 3 pivot strategy,
+             * swapping for efficient partition */
             MEDIAN3_SWAP(v, tosort, low, mid, high);
         }
         else {
@@ -236,15 +240,12 @@ int
             ll--;
             hh++;
         }
-#else
-        const npy_intp mid = low + (high - low) / 2;
-        /* median of 3 pivot strategy, swapping for efficient partition */
-        MEDIAN3_SWAP(v, tosort, low, mid, high);
-#endif
+
+        depth_limit--;
 
         /*
          * find place to put pivot (in low):
-         * previous swapping remove need for index checks
+         * previous swapping removes need for bound checks
          * pivot 3-lowest [x x x] 3-highest
          */
         UNGUARDED_PARTITION(v, tosort, v[IDX(low)], &ll, &hh);
@@ -265,7 +266,6 @@ int
 
     return 0;
 }
-/**end repeat2**/
 
 
 #undef IDX
@@ -274,7 +274,7 @@ int
 #undef MEDIAN3_SWAP
 #undef MEDIAN5
 #undef UNGUARDED_PARTITION
-#undef QUICKSELECT_MOM
+#undef INTROSELECT
 /**end repeat1**/
 
 /**end repeat**/
@@ -295,14 +295,14 @@ int
  */
 
 int
-quickselect_@suff@(@type@ *start, npy_intp num, PyArrayObject *arr)
+introselect_@suff@(@type@ *start, npy_intp num, PyArrayObject *arr)
 {
     return quicksort_@suff@(start, num, arr);
 }
 
 
 int
-aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, PyArrayObject *arr)
+aintroselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, PyArrayObject *arr)
 {
     return aquicksort_@suff@(v, tosort, num, arr);
 }
@@ -323,7 +323,7 @@ aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num, PyArrayObject *ar
  * kinds.
  */
 int
-npy_quickselect(void *base, size_t num, size_t size, npy_comparator cmp)
+npy_introselect(void *base, size_t num, size_t size, size_t kth, npy_comparator cmp)
 {
     return npy_quicksort(base, num, size, cmp);
 }

@@ -1175,7 +1175,7 @@ array_partition(PyArrayObject *self, PyObject *args, PyObject *kwds)
     int axis=-1;
     int val;
     Py_ssize_t kth;
-    NPY_SELECTKIND sortkind = NPY_QUICKSELECT;
+    NPY_SELECTKIND sortkind = NPY_INTROSELECT;
     PyObject *order = NULL;
     PyArray_Descr *saved = NULL;
     PyArray_Descr *newd;
@@ -1284,7 +1284,7 @@ array_argpartition(PyArrayObject *self, PyObject *args, PyObject *kwds)
 {
     int axis = -1;
     Py_ssize_t kth;
-    NPY_SELECTKIND sortkind = NPY_QUICKSELECT;
+    NPY_SELECTKIND sortkind = NPY_INTROSELECT;
     PyObject *order = NULL, *res;
     PyArray_Descr *newd, *saved=NULL;
     static char *kwlist[] = {"kth", "axis", "kind", "order", NULL};

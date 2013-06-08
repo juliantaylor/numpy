@@ -44,23 +44,25 @@
  *         npy_cdouble, npy_clongdouble#
  */
 
-int quickselect_@suff@(@type@ *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
+int introselect_@suff@(@type@ *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
                         npy_intp kth, void *NOT_USED);
 
-int quickselect_mom_@suff@(@type@ *v, npy_intp num, npy_intp kth, void *NOT_USED);
-int aquickselect_mom_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
+int introselect_mom_@suff@(@type@ *v, npy_intp num, npy_intp kth, void *NOT_USED);
+int aintroselect_mom_@suff@(@type@ *v, npy_intp* tosort, npy_intp num,
                             npy_intp kth, void *NOT_USED);
 
 
 /**end repeat**/
 
-int quickselect_string(npy_char *vec, npy_intp cnt, PyArrayObject *arr);
-int aquickselect_string(npy_char *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
+int introselect_string(npy_char *vec, npy_intp cnt, PyArrayObject *arr);
+int aintroselect_string(npy_char *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
 
 
-int quickselect_unicode(npy_ucs4 *vec, npy_intp cnt, PyArrayObject *arr);
-int aquickselect_unicode(npy_ucs4 *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
+int introselect_unicode(npy_ucs4 *vec, npy_intp cnt, PyArrayObject *arr);
+int aintroselect_unicode(npy_ucs4 *vec, npy_intp *ind, npy_intp cnt, npy_intp kth, void *null);
+
+int npy_introselect(void *base, size_t num, size_t size, size_t kth, npy_comparator cmp);
 
 typedef struct {
     enum NPY_TYPES typenum;
@@ -85,12 +87,10 @@ static part_map _part_map[] = {
     {
         NPY_@TYPE@,
         {
-            (PyArray_PartitionFunc *)&quickselect_@suff@,
-            (PyArray_PartitionFunc *)&quickselect_mom_@suff@
+            (PyArray_PartitionFunc *)&introselect_@suff@,
         },
         {
-            (PyArray_ArgPartitionFunc *)&aquickselect_@suff@,
-            (PyArray_ArgPartitionFunc *)&aquickselect_mom_@suff@
+            (PyArray_ArgPartitionFunc *)&aintroselect_@suff@,
         }
     },
 /**end repeat**/

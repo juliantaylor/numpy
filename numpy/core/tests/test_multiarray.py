@@ -890,7 +890,7 @@ class TestMethods(TestCase):
         assert_raises(ValueError, np.argpartition, d, 2, kind="nonsense")
         assert_raises(ValueError, d.partition, 2, axis=0, kind="nonsense")
         assert_raises(ValueError, d.argpartition, 2, axis=0, kind="nonsense")
-        for k in ("medianofmedian5", "quickselect"):
+        for k in ("introselect",):
             d = np.array([])
             assert_array_equal(np.partition(d, 0, kind=k), d)
             assert_array_equal(np.argpartition(d, 0, kind=k), d)

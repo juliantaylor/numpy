@@ -1215,8 +1215,8 @@ PyArray_Partition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND whic
     }
 
     switch (which) {
-        case NPY_QUICKSELECT :
-            sort = npy_quickselect;
+        case NPY_INTROSELECT :
+            sort = npy_introselect;
             break;
         default:
             PyErr_SetString(PyExc_TypeError,
@@ -1476,8 +1476,8 @@ PyArray_ArgPartition(PyArrayObject *op, npy_intp kth, int axis, NPY_SELECTKIND w
     }
 
     switch (which) {
-        case NPY_QUICKSELECT :
-            sort = npy_quicksort;
+        case NPY_INTROSELECT :
+            sort = npy_introselect;
             break;
         default:
             PyErr_SetString(PyExc_TypeError,
