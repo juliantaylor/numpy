@@ -2,12 +2,15 @@
 
 /*
  * 
- * The code is based on the quickselect from
+ * The code is loosely based on the quickselect from
  * Nicolas Devillard - 1998 public domain
  * http://ndevilla.free.fr/median/median/
  *
- * Quick select is usually the fastest, but the worst case scenario can
- * be quadratic complexcity.
+ * Quick select with median of 3 pivot is usually the fastest,
+ * but the worst case scenario can be quadratic complexcity,
+ * e.g. np.roll(np.arange(x), x / 2)
+ * To avoid this if it recurses too much it falls back to the
+ * worst case linear median of median of group 5 pivot strategy.
  */
 
 
@@ -61,6 +64,7 @@ median_of_median5_@suff@(@type@ *v, const npy_intp num);
  * #arg = 0, 1#
  */
 #if @arg@
+/* helper macros to avoid duplication of direct/indirect selection */
 #define IDX(x) tosort[x]
 #define SORTEE(x) tosort[x]
 #define SWAP INTP_SWAP
@@ -90,7 +94,7 @@ median_of_median5_@suff@(@type@ *v, const npy_intp num);
 /*
  * median of 3 pivot strategy
  * gets min and median and moves median to low and min to low + 1
- * for efficient partitioning
+ * for efficient partitioning, see unguarded_partition
  */
 static NPY_INLINE void
 @name@median3_swap_@suff@(@type@ * v,
@@ -120,7 +124,7 @@ static npy_intp @name@median5_@suff@(
 #endif
                                     )
 {
-    /* could be optimized as we don't need to swap */
+    /* could be optimized as we only need the index (no swaps) */
     if (@TYPE@_LT(v[IDX(1)], v[IDX(0)])) {
         SWAP(SORTEE(1), SORTEE(0));
     }
@@ -157,7 +161,9 @@ static npy_intp @name@median5_@suff@(
 
 /*
  * partition and return the index were the pivot belongs
- * pivot can't be smallest or largest element
+ * the data must have following property to avoid bound checks:
+ *                  ll ... hh
+ * lower-than-pivot [x x x x] larger-than-pivot
  */
 static NPY_INLINE void
 @name@unguarded_partition_@suff@(@type@ * v,
@@ -179,6 +185,11 @@ static NPY_INLINE void
 }
 
 
+/*
+ * select median of median of blocks of 5
+ * if used as partition pivot it splits the range into at least 30%/70%
+ * allowing linear time worstcase quickselect
+ */
 static npy_intp
 @name@median_of_median5_@suff@(@type@ *v,
 #if @arg@
