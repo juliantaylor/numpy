@@ -1329,20 +1329,20 @@ NPY_NO_EXPORT void
         @type@ * ip2 = (@type@ *)args[1];
         npy_intp n = dimensions[0];
         npy_intp i, j;
-        @type@ sums[n / 2 + 1];
-        for (i = j = 0; i < n / 2; i++, j += 2) {
-            sums[i] = ip2[i] + ip2[i + 1];
-        }
-        npy_intp limit = (n+1) / 2;
-        while (limit > 2) {
-            for (i = j = 0; i < limit / 2; i++, j += 2)
-                sums[i] = sums[j] + sums[j + 1];
 
-            if (limit & 1)
-                sums[limit / 2] = sums[limit - 1];
-            limit = (limit + 1) / 2;
+        @type@ sum, correction, corrected_next_term, new_sum;
+
+        sum = ip2[0];
+        correction = 0.0;
+        for (i = 1; i < n; i++)
+        {
+            corrected_next_term = ip2[i] - correction;
+            new_sum = sum + corrected_next_term;
+            correction = (new_sum - sum) - corrected_next_term;
+            sum = new_sum;
         }
-        *iop1 @OP@= sums[0] + sums[1];
+
+        *iop1 @OP@= sum;
     }
     else {
         if (run_binary_simd_@kind@_@TYPE@(args, dimensions, steps)) {
