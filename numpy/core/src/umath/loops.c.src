@@ -565,8 +565,9 @@ BOOL_@kind@(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED
 {
     if(IS_BINARY_REDUCE) {
         if (steps[1] == 1) {
+            args[1][dimensions[0] - 1] = 1 - @and@;
             *((npy_bool *)args[0]) =
-                memchr(args[1], 1 - @and@, dimensions[0]) @SC@ NULL;
+                rawmemchr(args[1], 1 - @and@) @SC@ NULL;
             return;
         }
         BINARY_REDUCE_LOOP(npy_bool) {

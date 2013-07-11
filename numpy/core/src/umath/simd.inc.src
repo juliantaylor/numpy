@@ -114,6 +114,24 @@ static const npy_int32 fanout_4[] = {
     0x01010101
 };
 
+static const npy_int32 fanout_4_swap[] = { 
+    0x00000000,
+    0x01000000,
+    0x00000100,
+    0x01000100,
+    0x00010000,
+    0x01010000,
+    0x00010100,
+    0x01010100,
+    0x00000001,
+    0x01000001,
+    0x00000101,
+    0x01000101,
+    0x00010001,
+    0x01010001,
+    0x00010101,
+    0x01010101
+};
 
 /*
  * Dispatcher functions
@@ -510,6 +528,28 @@ sse2_binary_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy_intp n)
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[i]);
     }
     r = &op[i];
+if (sizeof(@type@) == 8) {
+    LOOP_BLOCKED(@type@, 32) {
+        __m128d a = @vpre@_load_pd((double*)&ip1[i]);
+        __m128d b = @vpre@_load_pd((double*)&ip1[i+2]);
+        __m128d c = @vpre@_loadu_pd((double*)&ip2[i]);
+        __m128d d = @vpre@_loadu_pd((double*)&ip2[i+2]);
+        __m128d r1 = @vpre@_@VOP@_pd(a, c);
+        __m128d r2 = @vpre@_@VOP@_pd(b, d);
+
+        __m128i ir1 = *(__m128i*)&r1;
+        __m128i ir2 = *(__m128i*)&r2;
+        ir1 = _mm_slli_epi64(ir1, 32);
+        ir2 = _mm_srli_epi64(ir2, 32);
+        __m128i rv = _mm_or_si128(ir1, ir2);
+        int ir = fanout_4_swap[_mm_movemask_ps(*(__m128*)&rv)];
+        /* may be unaligned */
+        memcpy(r, &ir, sizeof(ir));
+        r += sizeof(ir);
+    }
+}
+else
+{
     LOOP_BLOCKED(@type@, 16) {
         @vtype@ a = @vpre@_load_@vsuf@(&ip1[i]);
         @vtype@ b = @vpre@_loadu_@vsuf@(&ip2[i]);
@@ -519,6 +559,7 @@ sse2_binary_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy_intp n)
         memcpy(r, &ir, sizeof(ir));
         r += sizeof(ir);
     }
+}
     LOOP_BLOCKED_END {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[i]);
     }
@@ -552,11 +593,31 @@ static void
 sse2_binary_scalar2_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy_intp n)
 {
     npy_bool * r;
-    @vtype@ b = @vpre@_set1_@vsuf@(ip2[0]);
     LOOP_BLOCK_ALIGN_VAR(ip1, @type@, 16) {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[0]);
     }
     r = &op[i];
+    if (sizeof(@type@) == 8)
+    {
+    __m128d b = @vpre@_set1_pd(ip2[0]);
+        LOOP_BLOCKED(@type@, 32) {
+            __m128d a = @vpre@_load_pd((double*)&ip1[i]);
+            __m128d c = @vpre@_load_pd((double*)&ip1[i+2]);
+            __m128d r1 = @vpre@_@VOP@_pd(a, b);
+            __m128d r2 = @vpre@_@VOP@_pd(c, b);
+
+            __m128i ir1 = *(__m128i*)&r1;
+            __m128i ir2 = *(__m128i*)&r2;
+            ir1 = _mm_slli_epi64(ir1, 32);
+            ir2 = _mm_srli_epi64(ir2, 32);
+            __m128i rv = _mm_or_si128(ir1, ir2);
+            int ir = fanout_4_swap[_mm_movemask_ps(*(__m128*)&rv)];
+            /* may be unaligned */
+            memcpy(r, &ir, sizeof(ir));
+            r += sizeof(ir);
+    }
+    } else {
+    @vtype@ b = @vpre@_set1_@vsuf@(ip2[0]);
     LOOP_BLOCKED(@type@, 16) {
         @vtype@ a = @vpre@_load_@vsuf@(&ip1[i]);
         @vtype@ c = @vpre@_@VOP@_@vsuf@(a, b);
@@ -564,6 +625,7 @@ sse2_binary_scalar2_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy
         /* may be unaligned */
         memcpy(r, &ir, sizeof(ir));
         r += sizeof(ir);
+    }
     }
     LOOP_BLOCKED_END {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[0]);
