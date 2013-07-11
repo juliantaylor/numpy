@@ -20,6 +20,8 @@
 
 #include "ufunc_object.h"
 
+#include <string.h> /* for memchr */
+
 
 /*
  * include vectorized functions and dispatchers
@@ -555,13 +557,16 @@ BOOL_@kind@(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED
  * #kind = logical_and, logical_or#
  * #OP =  &&, ||#
  * #SC =  ==, !=#
+ * #and = 1, 0#
  **/
 
 NPY_NO_EXPORT void
 BOOL_@kind@(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
 {
     if(IS_BINARY_REDUCE) {
-        if (run_reduce_simd_@kind@_BOOL(args, dimensions, steps)) {
+        if (steps[1] == 1) {
+            *((npy_bool *)args[0]) =
+                memchr(args[1], 1 - @and@, dimensions[0]) @SC@ NULL;
             return;
         }
         BINARY_REDUCE_LOOP(npy_bool) {
