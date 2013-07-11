@@ -47,6 +47,9 @@ case, now indicates a 0-D iteration and ``op_axes`` being NULL and the old
 usage is deprecated. This does not effect the ``NpyIter_New`` or
 ``NpyIter_MultiNew`` functions.
 
+Due to performance optimizations np.any on boolean arrays requires that these
+arrays are filled with byte 1 or 0.
+
 NPY_RELAXED_STRIDES_CHECKING
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 There is a new compile time environment variable
