@@ -191,10 +191,16 @@ New functions `partition` and `argpartition`
 
 New functions to partially sort arrays via a selection algorithm.
 
-Partial sorting moves the value of selected elements into their position if the
-array would be sorted. In the resulting array all elements smaller than the
-sorted elements will placed before the it and all equal or greater behind it.
-This has a linear time complexity of ``O(n)`` compared to ``O(n log(n))`` of a
+Partial sorting by index ``k`` sorts the ``k`` smallest elements into the front of
+an array.  All elements before ``k`` are then smaller or equal than the value in
+position ``k`` and all elements following ``k`` are then greater or equal than the
+value in position ``k`` but the ordering of these values is undefined.
+
+The value of the position ``k`` is then `kth order statistic` of the array. A
+sequence of ``k`` indices can be provided to obtain several order statistics at
+once via iterative partitioning.
+
+Partition has a linear time complexity of ``O(n)`` compared to ``O(n log(n))`` of a
 full sort.
 
 New functions `nanmean`, `nanvar` and `nanstd`
