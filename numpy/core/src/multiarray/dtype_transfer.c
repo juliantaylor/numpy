@@ -3115,11 +3115,9 @@ void _strided_masked_wrapper_transfer_function(
         src += subloopsize * src_stride;
         N -= subloopsize;
         /* Process unmasked values */
-        subloopsize = 0;
-        while (subloopsize < N && *mask) {
-            ++subloopsize;
-            mask += mask_stride;
-        }
+        npy_intp offset = (npy_intp)memchr(mask, 0, N);
+        subloopsize = offset == 0 ? N : offset - (npy_intp)mask;
+        mask += subloopsize * mask_stride;
         unmasked_stransfer(dst, dst_stride, src, src_stride,
                             subloopsize, src_itemsize, unmasked_transferdata);
         dst += subloopsize * dst_stride;
