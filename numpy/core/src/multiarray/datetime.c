@@ -24,6 +24,7 @@
 #include "methods.h"
 #include "_datetime.h"
 #include "datetime_strings.h"
+#include "scalarmathmodule.h"
 
 /*
  * Imports the PyDateTime functions so we can create these objects.
@@ -1086,6 +1087,46 @@ get_datetime_units_factor(NPY_DATETIMEUNIT bigbase, NPY_DATETIMEUNIT littlebase)
         ++unit;
     }
     return factor;
+}
+
+/*
+ * Returns the scale factor between the units. Does not validate
+ * that bigbase represents larger units than littlebase, or that
+ * the units are not generic.
+ *
+ * Returns 0 if there is an overflow.
+ */
+PyLongObject *
+get_pylong_datetime_units_factor(NPY_DATETIMEUNIT bigbase, NPY_DATETIMEUNIT littlebase)
+{
+    unsigned long long factor1 = 1;
+    unsigned long long factor2 = 1;
+    unsigned long long * acc = &factor1;
+    int unit = (int)bigbase;
+    PyLongObject * res;
+
+    while (littlebase > unit) {
+        unsigned long long r = _datetime_factors[unit];
+        if (npy_mul_with_overflow_ulonglong(&r, *acc, r)) {
+            /* change accumulator, repeat */
+            acc = &factor2;
+            continue;
+        }
+        else {
+            *acc = r;
+        }
+        ++unit;
+    }
+
+    {
+        PyLongObject * res1 = PyLong_FromUnsignedLongLong(factor1);
+        PyLongObject * res2 = PyLong_FromUnsignedLongLong(factor2);
+        res = PyNumber_Multiply(res1, res2);
+        Py_DECREF(res1);
+        Py_DECREF(res2);
+    }
+
+    return res;
 }
 
 /* Euclidean algorithm on two positive numbers */
