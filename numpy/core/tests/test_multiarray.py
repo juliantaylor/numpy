@@ -67,10 +67,13 @@ class TestFlags(TestCase):
 class TestHash(TestCase):
     # see #3793
     def test_int(self):
+        def dt64(x):
+            return np.datetime64(x, 'ns')
         for st, ut, s in [(np.int8, np.uint8, 8),
                           (np.int16, np.uint16, 16),
                           (np.int32, np.uint32, 32),
-                          (np.int64, np.uint64, 64)]:
+                          (np.int64, np.uint64, 64),
+                          (dt64, None, 64)]:
             for i in range(1, s):
                 assert_equal(hash(st(-2**i)), hash(-2**i),
                              err_msg="%r: -2**%d" % (st, i))
@@ -78,6 +81,9 @@ class TestHash(TestCase):
                              err_msg="%r: 2**%d" % (st, i - 1))
                 assert_equal(hash(st(2**i - 1)), hash(2**i - 1),
                              err_msg="%r: 2**%d - 1" % (st, i))
+
+                if ut is None:
+                    continue
 
                 i = max(i - 1, 1)
                 assert_equal(hash(ut(2**(i - 1))), hash(2**(i - 1)),
