@@ -700,6 +700,7 @@ PyArray_Choose(PyArrayObject *ip, PyObject *op, PyArrayObject *out,
     ret_data = PyArray_DATA(obj);
 
     while (PyArray_MultiIter_NOTDONE(multi)) {
+        char * data;
         mi = *((npy_intp *)PyArray_MultiIter_DATA(multi, n));
         if (mi < 0 || mi >= n) {
             switch(clipmode) {
@@ -730,7 +731,31 @@ PyArray_Choose(PyArrayObject *ip, PyObject *op, PyArrayObject *out,
                 break;
             }
         }
-        memmove(ret_data, PyArray_MultiIter_DATA(multi, mi), elsize);
+        data = PyArray_MultiIter_DATA(multi, mi);
+        /* no overlap possible */
+        if (out == NULL) {
+            /* bait the compiler into emitting fast code on unaligned access
+             * platforms */
+            switch (elsize) {
+                case 8:
+                    memcpy(ret_data, data, elsize);
+                    break;
+                case 4:
+                    memcpy(ret_data, data, elsize);
+                    break;
+                case 2:
+                    memcpy(ret_data, data, elsize);
+                    break;
+                case 1:
+                    memcpy(ret_data, data, elsize);
+                    break;
+                default:
+                    memcpy(ret_data, data, elsize);
+            }
+        }
+        else {
+            memmove(ret_data, data, elsize);
+        }
         ret_data += elsize;
         PyArray_MultiIter_NEXT(multi);
     }
