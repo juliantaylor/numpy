@@ -2687,8 +2687,9 @@ NPY_NO_EXPORT PyObject *
 PyArray_Where(PyObject *condition, PyObject *x, PyObject *y)
 {
     PyArrayObject *arr;
-    PyObject *tup = NULL, *obj = NULL;
+    PyObject *obj = NULL;
     PyObject *ret = NULL, *zero = NULL;
+    PyArrayObject * ax = NULL, * ay = NULL;
 
     arr = (PyArrayObject *)PyArray_FromAny(condition, NULL, 0, 0, 0, NULL);
     if (arr == NULL) {
@@ -2706,24 +2707,106 @@ PyArray_Where(PyObject *condition, PyObject *x, PyObject *y)
         return NULL;
     }
 
-
-    zero = PyInt_FromLong((long) 0);
-    obj = PyArray_EnsureAnyArray(PyArray_GenericBinaryFunction(arr, zero,
-                n_ops.not_equal));
-    Py_DECREF(zero);
-    Py_DECREF(arr);
+    if (!PyArray_ISBOOL(arr)) {
+        zero = PyInt_FromLong((long) 0);
+        obj = PyArray_EnsureAnyArray(PyArray_GenericBinaryFunction(arr, zero,
+                                                           n_ops.not_equal));
+        Py_DECREF(zero);
+        Py_DECREF(arr);
+    }
+    else {
+        obj = arr;
+    }
     if (obj == NULL) {
         return NULL;
     }
-    tup = Py_BuildValue("(OO)", y, x);
-    if (tup == NULL) {
+    ax = PyArray_FromAny(x, NULL, 0, 0, NPY_ARRAY_CARRAY, NULL);
+    ay = PyArray_FromAny(y, NULL, 0, 0, NPY_ARRAY_CARRAY, NULL);
+
+    {
+        PyArrayObject * op_in[4];
+        npy_uint32 flags = NPY_ITER_EXTERNAL_LOOP;
+        npy_uint32 op_flags[4];
+        NpyIter_IterNextFunc *iternext;
+        npy_intp * innersizeptr;
+        char **dataptrarray;
+        PyArray_CopySwapFunc *copyswapx = PyArray_DESCR(ax)->f->copyswap;
+        PyArray_CopySwapFunc *copyswapy = PyArray_DESCR(ay)->f->copyswap;
+        op_in[0] = NULL;
+        op_in[1] = obj;
+        op_in[2] = ax;
+        op_in[3] = ay;
+        op_flags[0] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
+        op_flags[1] = NPY_ITER_READONLY;
+        op_flags[2] = NPY_ITER_READONLY | NPY_ITER_COPY;
+        op_flags[3] = NPY_ITER_READONLY | NPY_ITER_COPY;
+        NpyIter * iter =
+            NpyIter_MultiNew(4, op_in, flags,
+                             NPY_KEEPORDER, NPY_NO_CASTING,
+                             op_flags, NULL);
+        if (iter == NULL) {
+            Py_DECREF(ax);
+            Py_DECREF(ay);
+            Py_DECREF(obj);
+            return NULL;
+        }
+        /*
+         * Make a copy of the iternext function pointer and
+         * a few other variables the inner loop needs.
+         */
+        iternext = NpyIter_GetIterNext(iter, NULL);
+        /*
+         * The inner loop size and data pointers may change during the
+         * loop, so just cache the addresses.
+         */
+        innersizeptr = NpyIter_GetInnerLoopSizePtr(iter);
+        dataptrarray = NpyIter_GetDataPtrArray(iter);
+
+        /*
+         * Note that because the iterator allocated the output,
+         * it matches the iteration order and is packed tightly,
+         * so we don't need to check it like the input.
+         */
+        do {
+            int axswap = PyArray_ISBYTESWAPPED(ax);
+            int ayswap = PyArray_ISBYTESWAPPED(ay);
+            npy_intp n = (*innersizeptr), i;
+            npy_intp itemsize = NpyIter_GetDescrArray(iter)[0]->elsize;
+            npy_intp xstride = NpyIter_GetInnerStrideArray(iter)[2];
+            npy_intp ystride = NpyIter_GetInnerStrideArray(iter)[3];
+            char * dst = dataptrarray[0];
+            char * csrc = dataptrarray[1];
+            char * xsrc = dataptrarray[2];
+            char * ysrc = dataptrarray[3];
+            for (i = 0; i < n; i++) {
+                if (*csrc) {
+                    copyswapx(dst, xsrc, axswap, ax);
+                }
+                else {
+                    copyswapy(dst, ysrc, ayswap, ay);
+                }
+                dst += itemsize;
+                xsrc += xstride;
+                ysrc += ystride;
+                csrc++;
+            }
+        } while (iternext(iter));
+
+        /* Get the result from the iterator object array */
+        ret = NpyIter_GetOperandArray(iter)[0];
+        Py_INCREF(ret);
+
+        if (NpyIter_Deallocate(iter) != NPY_SUCCEED) {
+            Py_DECREF(ret);
+            Py_DECREF(ax);
+            Py_DECREF(ay);
+            Py_DECREF(obj);
+            return NULL;
+        }
+
         Py_DECREF(obj);
-        return NULL;
+        return ret;
     }
-    ret = PyArray_Choose((PyArrayObject *)obj, tup, NULL, NPY_RAISE);
-    Py_DECREF(obj);
-    Py_DECREF(tup);
-    return ret;
 }
 
 static PyObject *
