@@ -2679,6 +2679,22 @@ array_set_datetimeparse_function(PyObject *NPY_UNUSED(self),
     return NULL;
 }
 
+#define INNER_WHERE_LOOP(size) \
+    do { \
+        for (i = 0; i < n; i++) { \
+            if (*csrc) { \
+                memcpy(dst, xsrc, size); \
+            } \
+            else { \
+                memcpy(dst, ysrc, size); \
+            } \
+            dst += size; \
+            xsrc += xstride; \
+            ysrc += ystride; \
+            csrc++; \
+        } \
+    } while(0)
+
 
 /*NUMPY_API
  * Where
@@ -2689,7 +2705,6 @@ PyArray_Where(PyObject *condition, PyObject *x, PyObject *y)
     PyArrayObject *arr;
     PyObject *obj = NULL;
     PyObject *ret = NULL, *zero = NULL;
-    PyArrayObject * ax = NULL, * ay = NULL;
 
     arr = (PyArrayObject *)PyArray_FromAny(condition, NULL, 0, 0, 0, NULL);
     if (arr == NULL) {
@@ -2713,15 +2728,13 @@ PyArray_Where(PyObject *condition, PyObject *x, PyObject *y)
                                                            n_ops.not_equal));
         Py_DECREF(zero);
         Py_DECREF(arr);
+        if (obj == NULL) {
+            return NULL;
+        }
     }
     else {
         obj = arr;
     }
-    if (obj == NULL) {
-        return NULL;
-    }
-    ax = PyArray_FromAny(x, NULL, 0, 0, NPY_ARRAY_CARRAY, NULL);
-    ay = PyArray_FromAny(y, NULL, 0, 0, NPY_ARRAY_CARRAY, NULL);
 
     {
         PyArrayObject * op_in[4];
@@ -2730,6 +2743,12 @@ PyArray_Where(PyObject *condition, PyObject *x, PyObject *y)
         NpyIter_IterNextFunc *iternext;
         npy_intp * innersizeptr;
         char **dataptrarray;
+        PyObject * tup = PyTuple_Pack(2, x, y);
+        int n;
+        /* NPY_ITER_COMMON_DTYPE ? */
+        PyArrayObject ** mps = PyArray_ConvertToCommonType(tup, &n);
+        Py_DECREF(tup);
+        PyArrayObject * ax = mps[0], * ay = mps[1];
         PyArray_CopySwapFunc *copyswapx = PyArray_DESCR(ax)->f->copyswap;
         PyArray_CopySwapFunc *copyswapy = PyArray_DESCR(ay)->f->copyswap;
         op_in[0] = NULL;
@@ -2738,8 +2757,8 @@ PyArray_Where(PyObject *condition, PyObject *x, PyObject *y)
         op_in[3] = ay;
         op_flags[0] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
         op_flags[1] = NPY_ITER_READONLY;
-        op_flags[2] = NPY_ITER_READONLY | NPY_ITER_COPY;
-        op_flags[3] = NPY_ITER_READONLY | NPY_ITER_COPY;
+        op_flags[2] = NPY_ITER_READONLY;
+        op_flags[3] = NPY_ITER_READONLY;
         NpyIter * iter =
             NpyIter_MultiNew(4, op_in, flags,
                              NPY_KEEPORDER, NPY_NO_CASTING,
@@ -2770,6 +2789,7 @@ PyArray_Where(PyObject *condition, PyObject *x, PyObject *y)
         do {
             int axswap = PyArray_ISBYTESWAPPED(ax);
             int ayswap = PyArray_ISBYTESWAPPED(ay);
+            int native = (axswap == ayswap) && (axswap == 0);
             npy_intp n = (*innersizeptr), i;
             npy_intp itemsize = NpyIter_GetDescrArray(iter)[0]->elsize;
             npy_intp xstride = NpyIter_GetInnerStrideArray(iter)[2];
@@ -2778,17 +2798,29 @@ PyArray_Where(PyObject *condition, PyObject *x, PyObject *y)
             char * csrc = dataptrarray[1];
             char * xsrc = dataptrarray[2];
             char * ysrc = dataptrarray[3];
-            for (i = 0; i < n; i++) {
-                if (*csrc) {
-                    copyswapx(dst, xsrc, axswap, ax);
+            /* using -funswitch-loops would simplify this */
+            if (native && itemsize == 8) {
+                INNER_WHERE_LOOP(8);
+            }
+            else if (native && itemsize == 4) {
+                INNER_WHERE_LOOP(4);
+            }
+            else if (native && itemsize == 2) {
+                INNER_WHERE_LOOP(2);
+            }
+            else {
+                for (i = 0; i < n; i++) {
+                    if (*csrc) {
+                        copyswapx(dst, xsrc, axswap, ax);
+                    }
+                    else {
+                        copyswapy(dst, ysrc, ayswap, ay);
+                    }
+                    dst += itemsize;
+                    xsrc += xstride;
+                    ysrc += ystride;
+                    csrc++;
                 }
-                else {
-                    copyswapy(dst, ysrc, ayswap, ay);
-                }
-                dst += itemsize;
-                xsrc += xstride;
-                ysrc += ystride;
-                csrc++;
             }
         } while (iternext(iter));
 
