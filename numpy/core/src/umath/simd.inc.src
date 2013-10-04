@@ -154,9 +154,9 @@ static const npy_int32 fanout_4[] = {
  */
 
 /**begin repeat1
- * #func = sqrt, absolute, minimum, maximum#
- * #check = IS_BLOCKABLE_UNARY, IS_BLOCKABLE_UNARY, IS_BLOCKABLE_REDUCE, IS_BLOCKABLE_REDUCE#
- * #name = unary, unary, unary_reduce, unary_reduce#
+ * #func = sqrt, absolute, minimum, maximum, fmin, fmax#
+ * #check = IS_BLOCKABLE_UNARY, IS_BLOCKABLE_UNARY, IS_BLOCKABLE_REDUCE*4#
+ * #name = unary, unary, unary_reduce*4#
  */
 
 #if @vector@ && defined NPY_HAVE_SSE2_INTRINSICS
@@ -736,6 +736,49 @@ sse2_@kind@_@TYPE@(@type@ * ip, @type@ * op, const npy_intp n)
     }
     LOOP_BLOCKED_END {
         *op  = (*op @OP@ ip[i] || npy_isnan(*op)) ? *op : ip[i];
+    }
+}
+/**end repeat1**/
+
+/**begin repeat1
+ * #kind = fmax, fmin#
+ * #VOP = max, min#
+ * #OP = >=, <=#
+ **/
+/* arguments swapped as unary reduce has the swapped compared to unary */
+static void
+sse2_@kind@_@TYPE@(@type@ * ip, @type@ * op, const npy_intp n)
+{
+    LOOP_BLOCK_ALIGN_VAR(ip, @type@, 16) {
+        *op = (*op @OP@ ip[i] || npy_isnan(ip[i])) ? *op : ip[i];
+    }
+    assert(n < (16 / sizeof(@type@)) || npy_is_aligned(&ip[i], 16));
+    if (i + 2 * 16 / sizeof(@type@) <= n) {
+        /* load the first elements */
+        @vtype@ c = @vpre@_load_@vsuf@((@type@*)&ip[i]);
+        i += 16 / sizeof(@type@);
+
+        LOOP_BLOCKED(@type@, 16) {
+            @vtype@ a, n, v = @vpre@_load_@vsuf@((@type@*)&ip[i]);
+            c = @vpre@_@VOP@_@vsuf@(c, v);
+            /* get nan mask and select non nan */
+            v = _mm_cmpneq_@vsuf@(v, v);
+            a = @vpre@_and_@vsuf@(c, v);
+            n = @vpre@_andnot_@vsuf@(v, c);
+            c = @vpre@_or_@vsuf@(a, n);
+        }
+        PyUFunc_clearfperr();
+        {
+            @type@ tmp[16 / sizeof(@type@)];
+            @vpre@_store_@vsuf@(tmp, c);
+            size_t j;
+            for (j = 0; j < sizeof(tmp)/sizeof(tmp[0]); j++) {
+                *op  = (*op @OP@ tmp[j] || npy_isnan(tmp[j])) ? *op : tmp[j];
+            }
+        }
+    }
+    LOOP_BLOCKED_END {
+        *op  = (*op @OP@ ip[i] || npy_isnan(ip[i])) ? *op : ip[i];
     }
 }
 /**end repeat1**/
