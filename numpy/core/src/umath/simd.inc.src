@@ -93,6 +93,25 @@ static const npy_int16 fanout_2[] = {
     0x0100,
     0x0101,
 };
+/* fanout four bits to four bytes */
+static const npy_int32 fanout_2_[] = {
+    0x00000000,
+    0x00000001,
+    0x00010000,
+    0x00010001,
+    0x00000100,
+    0x00000101,
+    0x00010100,
+    0x00010101,
+    0x01000000,
+    0x01000001,
+    0x01010000,
+    0x01010001,
+    0x01000100,
+    0x01000101,
+    0x01010100,
+    0x01010101,
+};
 
 /* fanout four bits to four bytes */
 static const npy_int32 fanout_4[] = {
@@ -376,6 +395,8 @@ static NPY_INLINE npy_double sse2_horizontal_@VOP@___m128d(__m128d v)
  *  #nan = NPY_NANF, NPY_NAN#
  *  #mtype = npy_int32, npy_int16#
  *  #fanout = fanout_4, fanout_2#
+ *  #cast = , _mm_castpd_ps#
+ *  #double = 0, 1#
  */
 
 
@@ -574,13 +595,28 @@ sse2_binary_scalar2_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[0]);
     }
     r = &op[i];
-    LOOP_BLOCKED(@type@, 16) {
-        @vtype@ a = @vpre@_load_@vsuf@(&ip1[i]);
-        @vtype@ c = @vpre@_@VOP@_@vsuf@(a, b);
-        @mtype@ ir = @fanout@[@vpre@_movemask_@vsuf@(c)];
-        /* may be unaligned */
-        memcpy(r, &ir, sizeof(ir));
-        r += sizeof(ir);
+#if @double@
+    /* do some masking to reduce movemask usage for doubles
+     * could probably be further improved by using _mm_movemask_epi8 */
+    const __m128d mask1 = _mm_castsi128_pd(@vpre@_set1_epi64x(0x00000000FFFFFFFF));
+    const __m128d mask2 = _mm_castsi128_pd(@vpre@_set1_epi64x(0xFFFFFFFF00000000));
+#endif
+    LOOP_BLOCKED(@type@, 32) {
+        @vtype@ a1 = @vpre@_load_@vsuf@(&ip1[i]);
+        @vtype@ a2 = @vpre@_load_@vsuf@(&ip1[i + 16 / sizeof(@type@)]);
+        @vtype@ c1 = @vpre@_@VOP@_@vsuf@(a1, b);
+        @vtype@ c2 = @vpre@_@VOP@_@vsuf@(a2, b);
+#if @double@
+        c1 = _mm_and_pd(c1, mask1);
+        c2 = _mm_and_pd(c2, mask2);
+        c2 = _mm_or_pd(c1, c2);
+        *(npy_int32*)r = fanout_2_[(@vpre@_movemask_ps(@cast@(c2)))];
+        r += 4;
+#else
+        *(npy_int32*)(r) = @fanout@[(@vpre@_movemask_ps((c1)))];
+        *(npy_int32*)(r + 4) = @fanout@[(@vpre@_movemask_ps((c2)))];
+        r += 8;
+#endif
     }
     LOOP_BLOCKED_END {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[0]);
