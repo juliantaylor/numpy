@@ -526,13 +526,14 @@ sse2_binary_scalar2_@kind@_@TYPE@(@type@ * op, @type@ * ip1, @type@ * ip2, npy_i
  * #kind = equal, not_equal, less, less_equal, greater, greater_equal#
  * #OP = ==, !=, <, <=, >, >=#
  * #VOP = cmpeq, cmpneq, cmplt, cmple, cmpgt, cmpge#
+ * #isnan = 0, 1, 0*4#
 */
 
 /**begin repeat2
- * #akind = binary, scalar1, scalar2#
- * #ikind = 0, 1, 2#
- * #offset1 = 16, 0, 16#
- * #offset2 = 16, 16, 0#
+ * #akind = binary, scalar1, scalar2, unary#
+ * #ikind = 0, 1, 2, 3#
+ * #offset1 = 16, 0, 16, 16#
+ * #offset2 = 16, 16, 0, 16#
  */
 #if @ikind@ == 0
 #define VLOAD1(x) @vpre@_load_@vsuf@(x)
@@ -543,7 +544,11 @@ sse2_binary_scalar2_@kind@_@TYPE@(@type@ * op, @type@ * ip1, @type@ * ip2, npy_i
 #elif @ikind@ == 2
 #define VLOAD1(x) @vpre@_load_@vsuf@(x)
 #define VLOAD2(x) (*((@vtype@*)(x)))
+#elif @ikind@ == 3
+#define VLOAD1(x) @vpre@_load_@vsuf@(x)
+#define VLOAD2(x) @vpre@_load_@vsuf@(x - ip2 + ip1)
 #endif
+#if @ikind@ != 3 || @isnan@
 /* loop body of comparison unrolled once */
 static NPY_INLINE
 sse2_@VOP@_inner_@akind@_@TYPE@(@mtype@ ** op, char *ip1, char *ip2)
@@ -572,6 +577,7 @@ sse2_@VOP@_inner_@akind@_@TYPE@(@mtype@ ** op, char *ip1, char *ip2)
     (*op)++;
 #endif
 }
+#endif
 #undef VLOAD1
 #undef VLOAD2
 /**end repeat2**/
@@ -596,8 +602,16 @@ sse2_binary_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy_intp n)
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[i]);
     }
     r = &op[i];
-    LOOP_BLOCKED(@type@, 32) {
-        sse2_@VOP@_inner_binary_@TYPE@(&r, &ip1[i], &ip2[i]);
+    /* unary optimization only required if used for isnan */
+    if (@isnan@ && ip1 == ip2) {
+        LOOP_BLOCKED(@type@, 32) {
+            sse2_@VOP@_inner_unary_@TYPE@(&r, &ip1[i], &ip2[i]);
+        }
+    }
+    else {
+        LOOP_BLOCKED(@type@, 32) {
+            sse2_@VOP@_inner_binary_@TYPE@(&r, &ip1[i], &ip2[i]);
+        }
     }
     LOOP_BLOCKED_END {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[i]);
