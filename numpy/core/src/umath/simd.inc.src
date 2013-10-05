@@ -393,7 +393,7 @@ static NPY_INLINE npy_double sse2_horizontal_@VOP@___m128d(__m128d v)
  *  #vsuf = ps, pd#
  *  #vsufs = ss, sd#
  *  #nan = NPY_NANF, NPY_NAN#
- *  #mtype = npy_int32, npy_int16#
+ *  #mtype = npy_int32, npy_int32#
  *  #fanout = fanout_4, fanout_2#
  *  #cast = , _mm_castpd_ps#
  *  #double = 0, 1#
@@ -544,19 +544,33 @@ sse2_binary_scalar2_@kind@_@TYPE@(@type@ * op, @type@ * ip1, @type@ * ip2, npy_i
 #define VLOAD1(x) @vpre@_load_@vsuf@(x)
 #define VLOAD2(x) (*((@vtype@*)(x)))
 #endif
+/* loop body of comparison unrolled once */
 static NPY_INLINE
 sse2_@VOP@_inner_@akind@_@TYPE@(@mtype@ ** op, char *ip1, char *ip2)
 {
-        @vtype@ a1 = VLOAD1(ip1);
-        @vtype@ a2 = VLOAD1(ip1 + @offset1@);
-        @vtype@ b1 = VLOAD2(ip2);
-        @vtype@ b2 = VLOAD2(ip2 + @offset2@);
-        @vtype@ c1 = @vpre@_@VOP@_@vsuf@(a1, b1);
-        @vtype@ c2 = @vpre@_@VOP@_@vsuf@(a2, b2);
-        **op = @fanout@[@vpre@_movemask_@vsuf@(c1)];
-        (*op)++;
-        **op = @fanout@[@vpre@_movemask_@vsuf@(c2)];
-        (*op)++;
+    @vtype@ a1 = VLOAD1(ip1);
+    @vtype@ a2 = VLOAD1(ip1 + @offset1@);
+    @vtype@ b1 = VLOAD2(ip2);
+    @vtype@ b2 = VLOAD2(ip2 + @offset2@);
+    @vtype@ c1 = @vpre@_@VOP@_@vsuf@(a1, b1);
+    @vtype@ c2 = @vpre@_@VOP@_@vsuf@(a2, b2);
+
+#if @double@
+    /* do some masking to reduce movemask usage for doubles
+     * could probably be further improved by using _mm_movemask_epi8 */
+    const __m128d mask1 = _mm_castsi128_pd(@vpre@_set1_epi64x(0x00000000FFFFFFFF));
+    const __m128d mask2 = _mm_castsi128_pd(@vpre@_set1_epi64x(0xFFFFFFFF00000000));
+    c1 = _mm_and_pd(c1, mask1);
+    c2 = _mm_and_pd(c2, mask2);
+    c2 = _mm_or_pd(c1, c2);
+    **op = fanout_2_[(@vpre@_movemask_ps(@cast@(c2)))];
+    (*op)++;
+#else
+    (**op) = @fanout@[(@vpre@_movemask_ps((c1)))];
+    (*op)++;
+    **op = @fanout@[(@vpre@_movemask_ps((c2)))];
+    (*op)++;
+#endif
 }
 #undef VLOAD1
 #undef VLOAD2
@@ -612,34 +626,14 @@ sse2_binary_scalar1_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy
 static void
 sse2_binary_scalar2_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy_intp n)
 {
-    npy_bool * r;
+    @mtype@ * r;
     @vtype@ b = @vpre@_set1_@vsuf@(ip2[0]);
     LOOP_BLOCK_ALIGN_VAR(ip1, @type@, 16) {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[0]);
     }
     r = &op[i];
-#if @double@
-    /* do some masking to reduce movemask usage for doubles
-     * could probably be further improved by using _mm_movemask_epi8 */
-    const __m128d mask1 = _mm_castsi128_pd(@vpre@_set1_epi64x(0x00000000FFFFFFFF));
-    const __m128d mask2 = _mm_castsi128_pd(@vpre@_set1_epi64x(0xFFFFFFFF00000000));
-#endif
     LOOP_BLOCKED(@type@, 32) {
-        @vtype@ a1 = @vpre@_load_@vsuf@(&ip1[i]);
-        @vtype@ a2 = @vpre@_load_@vsuf@(&ip1[i + 16 / sizeof(@type@)]);
-        @vtype@ c1 = @vpre@_@VOP@_@vsuf@(a1, b);
-        @vtype@ c2 = @vpre@_@VOP@_@vsuf@(a2, b);
-#if @double@
-        c1 = _mm_and_pd(c1, mask1);
-        c2 = _mm_and_pd(c2, mask2);
-        c2 = _mm_or_pd(c1, c2);
-        *(npy_int32*)r = fanout_2_[(@vpre@_movemask_ps(@cast@(c2)))];
-        r += 4;
-#else
-        *(npy_int32*)(r) = @fanout@[(@vpre@_movemask_ps((c1)))];
-        *(npy_int32*)(r + 4) = @fanout@[(@vpre@_movemask_ps((c2)))];
-        r += 8;
-#endif
+        sse2_@VOP@_inner_scalar2_@TYPE@(&r, &ip1[i], &b);
     }
     LOOP_BLOCKED_END {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[0]);
