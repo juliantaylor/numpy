@@ -528,6 +528,33 @@ sse2_binary_scalar2_@kind@_@TYPE@(@type@ * op, @type@ * ip1, @type@ * ip2, npy_i
  * #VOP = cmpeq, cmpneq, cmplt, cmple, cmpgt, cmpge#
 */
 
+/**begin repeat2
+ * #akind = binary, scalar1, scalar2#
+ * #ikind = 0, 1, 2#
+ */
+#if @ikind@ == 0
+#define VLOAD1(x) @vpre@_load_@vsuf@(x)
+#define VLOAD2(x) @vpre@_loadu_@vsuf@(x)
+#elif @ikind@ == 1
+#define VLOAD1(x) (*((@vtype@*)(x)))
+#define VLOAD2(x) @vpre@_load_@vsuf@(x)
+#elif @ikind@ == 2
+#define VLOAD1(x) @vpre@_load_@vsuf@(x)
+#define VLOAD2(x) (*((@vtype@*)(x)))
+#endif
+static NPY_INLINE
+sse2_@VOP@_inner_@akind@_@TYPE@(@mtype@ ** op, void *ip1, void *ip2)
+{
+        @vtype@ a = VLOAD1(ip1);
+        @vtype@ b = VLOAD2(ip2);
+        @vtype@ c = @vpre@_@VOP@_@vsuf@(a, b);
+        **op = @fanout@[@vpre@_movemask_@vsuf@(c)];
+        (*op)++;
+}
+#undef VLOAD1
+#undef VLOAD2
+/**end repeat2**/
+
 /* sets invalid fpu flag on QNaN for consistency with packed compare */
 static NPY_INLINE int
 sse2_ordered_cmp_@kind@_@TYPE@(const @type@ a, const @type@ b)
@@ -543,19 +570,13 @@ sse2_ordered_cmp_@kind@_@TYPE@(const @type@ a, const @type@ b)
 static void
 sse2_binary_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy_intp n)
 {
-    npy_bool * r;
+    @mtype@ * r;
     LOOP_BLOCK_ALIGN_VAR(ip1, @type@, 16) {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[i]);
     }
     r = &op[i];
     LOOP_BLOCKED(@type@, 16) {
-        @vtype@ a = @vpre@_load_@vsuf@(&ip1[i]);
-        @vtype@ b = @vpre@_loadu_@vsuf@(&ip2[i]);
-        @vtype@ c = @vpre@_@VOP@_@vsuf@(a, b);
-        @mtype@ ir = @fanout@[@vpre@_movemask_@vsuf@(c)];
-        /* may be unaligned */
-        memcpy(r, &ir, sizeof(ir));
-        r += sizeof(ir);
+        sse2_@VOP@_inner_binary_@TYPE@(&r, &ip1[i], &ip2[i]);
     }
     LOOP_BLOCKED_END {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[i], ip2[i]);
@@ -566,19 +587,14 @@ sse2_binary_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy_intp n)
 static void
 sse2_binary_scalar1_@kind@_@TYPE@(npy_bool * op, @type@ * ip1, @type@ * ip2, npy_intp n)
 {
-    npy_bool * r;
+    @mtype@ * r;
     @vtype@ a = @vpre@_set1_@vsuf@(ip1[0]);
     LOOP_BLOCK_ALIGN_VAR(ip2, @type@, 16) {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[0], ip2[i]);
     }
     r = &op[i];
     LOOP_BLOCKED(@type@, 16) {
-        @vtype@ b = @vpre@_load_@vsuf@(&ip2[i]);
-        @vtype@ c = @vpre@_@VOP@_@vsuf@(a, b);
-        @mtype@ ir = @fanout@[@vpre@_movemask_@vsuf@(c)];
-        /* may be unaligned */
-        memcpy(r, &ir, sizeof(ir));
-        r += sizeof(ir);
+        sse2_@VOP@_inner_scalar1_@TYPE@(&r, &a, &ip2[i]);
     }
     LOOP_BLOCKED_END {
         op[i] = sse2_ordered_cmp_@kind@_@TYPE@(ip1[0], ip2[i]);
