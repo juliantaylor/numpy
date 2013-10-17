@@ -92,9 +92,29 @@ class TestHash(TestCase):
                 y = np.datetime64(2**i - 1, u)
                 if x == y:
                     assert_equal(hash(x), hash(y))
+
+                x = np.timedelta64(2**i - 1, u)
+                y = np.timedelta64(2**i - 1, u)
+                if x == y:
+                    assert_equal(hash(x), hash(y))
+
+                for v in ['as', 'fs', 'ps', 'us', 'ms', 's', 'h']:
+                    x = np.datetime64(2**i - 1, u)
+                    y = np.datetime64(x, v)
+                    if x == y:
+                        assert_equal(hash(x), hash(y))
+
         for u in ['D', 'W', 'M', 'Y']:
             for i in range(1, 64):
-                pass
+                x = np.datetime64(2**i - 1, u)
+                y = np.datetime64(2**i - 1, u)
+                if x == y:
+                    assert_equal(hash(x), hash(y))
+
+                x = np.timedelta64(2**i - 1, u)
+                y = np.timedelta64(2**i - 1, u)
+                if x == y:
+                    assert_equal(hash(x), hash(y))
 
 
 class TestAttributes(TestCase):

@@ -2961,10 +2961,7 @@ static npy_hash_t
         destmeta.base = NPY_FR_as;
     }
 
-    if (destmeta.base > obmeta.base)
-        onum = get_pylong_datetime_units_factor(obmeta.base, destmeta.base);
-    else
-        onum = get_pylong_datetime_units_factor(destmeta.base, obmeta.base);
+    onum = get_pylong_datetime_units_factor(obmeta.base, destmeta.base);
 
     if (dt != NPY_DATETIME_NAT) {
         r = PyNumber_Multiply(odt, onum);
