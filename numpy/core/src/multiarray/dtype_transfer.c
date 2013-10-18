@@ -18,6 +18,7 @@
 #define _MULTIARRAYMODULE
 #include <numpy/arrayobject.h>
 #include <numpy/npy_cpu.h>
+#include <numpy/npy_math.h>
 
 #include "npy_pycompat.h"
 
@@ -28,6 +29,7 @@
 #include "shape.h"
 #include "lowlevel_strided_loops.h"
 
+#include "scalarmathmodule.h"
 #define NPY_LOWLEVEL_BUFFER_BLOCKSIZE  128
 
 /********** PRINTF DEBUG TRACING **************/
@@ -792,6 +794,12 @@ _strided_to_strided_datetime_cast(char *dst, npy_intp dst_stride,
 
         if (dt != NPY_DATETIME_NAT) {
             /* Apply the scaling */
+            npy_int64 dtnum;
+            if (npy_mul_with_overflow_longlong(&dtnum, dt, num)) {
+                npy_set_floatstatus_overflow();
+                return;
+            }
+
             if (dt < 0) {
                 dt = (dt * num - (denom - 1)) / denom;
             }
@@ -823,12 +831,18 @@ _aligned_strided_to_strided_datetime_cast(char *dst,
         dt = *(npy_int64 *)src;
 
         if (dt != NPY_DATETIME_NAT) {
+            npy_int64 dtnum;
+            if (npy_mul_with_overflow_longlong(&dtnum, dt, num)) {
+                npy_set_floatstatus_overflow();
+                return;
+            }
+
             /* Apply the scaling */
             if (dt < 0) {
-                dt = (dt * num - (denom - 1)) / denom;
+                dt = (dtnum - (denom - 1)) / denom;
             }
             else {
-                dt = dt * num / denom;
+                dt = dtnum / denom;
             }
         }
 
