@@ -101,8 +101,15 @@ class TestHash(TestCase):
                 for v in ['as', 'fs', 'ps', 'us', 'ms', 's', 'h']:
                     x = np.datetime64(2**i - 1, u)
                     y = np.datetime64(x, v)
-                    if x == y:
-                        assert_equal(hash(x), hash(y))
+                    try:
+                        with np.errstate(over='raise'):
+                            if x == y:
+                                assert_equal(hash(x), hash(y))
+                    except OverflowError:
+                        # on overflow all bets are off, hash must convert to a
+                        # different type so we can't even sue same overflow
+                        # behavior
+                        pass
 
         for u in ['D', 'W', 'M', 'Y']:
             for i in range(1, 64):
@@ -115,6 +122,19 @@ class TestHash(TestCase):
                 y = np.timedelta64(2**i - 1, u)
                 if x == y:
                     assert_equal(hash(x), hash(y))
+
+                for v in ['D', 'W', 'M', 'Y']:
+                    x = np.datetime64(2**i - 1, u)
+                    y = np.datetime64(x, v)
+                    try:
+                        with np.errstate(over='raise'):
+                            if x == y:
+                                assert_equal(hash(x), hash(y))
+                    except OverflowError:
+                        # on overflow all bets are off, hash must convert to a
+                        # different type so we can't even sue same overflow
+                        # behavior
+                        pass
 
 
 class TestAttributes(TestCase):
