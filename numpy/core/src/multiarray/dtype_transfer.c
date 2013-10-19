@@ -797,7 +797,6 @@ _strided_to_strided_datetime_cast(char *dst, npy_intp dst_stride,
             npy_int64 dtnum;
             if (npy_mul_with_overflow_longlong(&dtnum, dt, num)) {
                 npy_set_floatstatus_overflow();
-                return;
             }
 
             if (dt < 0) {
@@ -834,7 +833,6 @@ _aligned_strided_to_strided_datetime_cast(char *dst,
             npy_int64 dtnum;
             if (npy_mul_with_overflow_longlong(&dtnum, dt, num)) {
                 npy_set_floatstatus_overflow();
-                return;
             }
 
             /* Apply the scaling */

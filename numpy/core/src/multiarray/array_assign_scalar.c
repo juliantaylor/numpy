@@ -13,6 +13,7 @@
 #define NPY_NO_DEPRECATED_API NPY_API_VERSION
 #define _MULTIARRAYMODULE
 #include <numpy/ndarraytypes.h>
+#include <numpy/ufuncobject.h>
 
 #include "npy_config.h"
 #include "npy_pycompat.h"
@@ -275,6 +276,25 @@ PyArray_AssignRawScalar(PyArrayObject *dst,
                 wheremask_strides) < 0) {
             goto fail;
         }
+    }
+
+    /* Check status flag.  If it is set, then look up what to do */
+    _import_umath();
+    int retstatus = PyUFunc_getfperr();
+    if (retstatus) {
+        int bufsize, errmask;
+        PyObject *errobj;
+        int first = 1;
+
+        if (PyUFunc_GetPyValues("test_scalar", &bufsize, &errmask,
+                                &errobj) < 0) {
+            goto fail;
+        }
+        if (PyUFunc_handlefperr(errmask, errobj, retstatus, &first)) {
+            Py_XDECREF(errobj);
+            goto fail;
+        }
+        Py_XDECREF(errobj);
     }
 
     if (allocated_src_data) {
