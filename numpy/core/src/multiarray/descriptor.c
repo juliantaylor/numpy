@@ -238,14 +238,23 @@ _convert_from_tuple(PyObject *obj)
         return NULL;
     }
     val = PyTuple_GET_ITEM(obj,1);
+    /* accept list for the shape too */
+    if (PyList_Check(val)) {
+        val = PyList_AsTuple(val);
+    }
+    else {
+        Py_INCREF(val);
+    }
     /* try to interpret next item as a type */
     res = _use_inherit(type, val, &errflag);
     if (res || errflag) {
         Py_DECREF(type);
         if (res) {
+            Py_DECREF(val);
             return res;
         }
         else {
+            Py_DECREF(val);
             return NULL;
         }
     }
@@ -261,6 +270,7 @@ _convert_from_tuple(PyObject *obj)
         if (error_converting(itemsize)) {
             PyErr_SetString(PyExc_ValueError,
                     "invalid itemsize in generic type tuple");
+            Py_DECREF(val);
             goto fail;
         }
         PyArray_DESCR_REPLACE(type);
@@ -275,6 +285,7 @@ _convert_from_tuple(PyObject *obj)
         /* Assume it's a metadata dictionary */
         if (PyDict_Merge(type->metadata, val, 0) == -1) {
             Py_DECREF(type);
+            Py_DECREF(val);
             return NULL;
         }
     }
@@ -291,6 +302,7 @@ _convert_from_tuple(PyObject *obj)
             PyDimMem_FREE(shape.ptr);
             PyErr_SetString(PyExc_ValueError,
                     "invalid shape in fixed-type tuple.");
+            Py_DECREF(val);
             goto fail;
         }
         /*
@@ -303,11 +315,13 @@ _convert_from_tuple(PyObject *obj)
                 || (shape.len == 0
                     && PyTuple_Check(val))) {
             PyDimMem_FREE(shape.ptr);
+            Py_DECREF(val);
             return type;
         }
         newdescr = PyArray_DescrNewFromType(NPY_VOID);
         if (newdescr == NULL) {
             PyDimMem_FREE(shape.ptr);
+            Py_DECREF(val);
             goto fail;
         }
         newdescr->elsize = type->elsize;
@@ -323,10 +337,11 @@ _convert_from_tuple(PyObject *obj)
         newdescr->names = NULL;
         /* Force subarray->shape to always be a tuple */
         if (PyTuple_Check(val)) {
-            Py_INCREF(val);
+            /* val increfed above */
             newdescr->subarray->shape = val;
         } else {
             newdescr->subarray->shape = Py_BuildValue("(O)", val);
+            Py_DECREF(val);
             if (newdescr->subarray->shape == NULL) {
                 Py_DECREF(newdescr);
                 goto fail;
