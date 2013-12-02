@@ -533,6 +533,7 @@ def configuration(parent_package='',top_path=None):
         # put private include directory in build_dir on search path
         # allows using code generation in headers headers
         config.add_include_dirs(join(build_dir, "src", "private"))
+        config.add_include_dirs(join(build_dir, "src", "umath"))
 
         target = join(build_dir, header_dir, '_numpyconfig.h')
         d = os.path.dirname(target)
@@ -866,6 +867,7 @@ def configuration(parent_package='',top_path=None):
         # NOTE: For manual template conversion of loops.h.src, read the note
         #       in that file.
         sources = [
+            join(local_dir, subpath, 'loops.h.src'),
             join(local_dir, subpath, 'loops.c.src'),
             join(local_dir, subpath, 'simd.inc.src')]
 
@@ -895,6 +897,7 @@ def configuration(parent_package='',top_path=None):
             join('src', 'umath', 'reduction.c'),
             join('src', 'umath', 'funcs.inc.src'),
             join('src', 'umath', 'simd.inc.src'),
+            join('src', 'umath', 'loops.h.src'),
             join('src', 'umath', 'loops.c.src'),
             join('src', 'umath', 'ufunc_object.c'),
             join('src', 'umath', 'ufunc_type_resolution.c')]
@@ -902,6 +905,7 @@ def configuration(parent_package='',top_path=None):
     umath_deps = [
             generate_umath_py,
             join('src', 'multiarray', 'common.h'),
+            join('src', 'umath', 'loops.h.src'),
             join('src', 'umath', 'simd.inc.src'),
             join(codegen_dir, 'generate_ufunc_api.py'),
             join('src', 'private', 'ufunc_override.h')] + npymath_sources
@@ -912,6 +916,7 @@ def configuration(parent_package='',top_path=None):
         umath_src.append(generate_umath_templated_sources)
         umath_src.append(join('src', 'umath', 'funcs.inc.src'))
         umath_src.append(join('src', 'umath', 'simd.inc.src'))
+        umath_src.append(join('src', 'umath', 'loops.h.src'))
 
     config.add_extension('umath',
                          sources = umath_src +
