@@ -476,6 +476,7 @@ defdict = {
     Ufunc(2, 1, None,
           docstrings.get('numpy.core.umath.logaddexp'),
           None,
+          TD(flts),
           TD(flts, f="logaddexp", astype={'e':'f'})
           ),
 'logaddexp2':
