@@ -65,10 +65,11 @@ elif [ -n "$USE_BENTO" ] && [ $# -eq 0 ]; then
   $BENTO_ROOT/bentomaker build -i -j
   # Prepend to PYTHONPATH so tests can be run
   export PYTHONPATH=$PWD:$PYTHONPATH
-  sudo chroot $DIR bash -c "cd numpy && ./.travis.sh test"
+  ./.travis.sh test
 else
   # We change directories to make sure that python won't find the copy
   # of numpy in the source directory.
+  export PYTHONPATH=$PWD:$PYTHONPATH
   mkdir empty
   cd empty
   INSTALLDIR=$(python -c "import os; import numpy; print(os.path.dirname(numpy.__file__))")
