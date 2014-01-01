@@ -19,7 +19,7 @@ matrix:
     - python: 2.7
       env: USE_BENTO=1
     - python: 2.7
-      env: USE_CHROOT=1
+      env: USE_CHROOT=1 ARCH=i386 DIST=saucy
 before_install:
   - uname -a
   - free -m
