@@ -111,6 +111,7 @@ class TestAttributes(TestCase):
         assert_equal(self.two.nbytes, 20*num)
         assert_equal(self.two.itemsize, self.two.dtype.itemsize)
         assert_equal(self.two.base, arange(20))
+        b = {1, 2}
 
     def test_dtypeattr(self):
         assert_equal(self.one.dtype, dtype(int_))
