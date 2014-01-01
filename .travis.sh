@@ -29,6 +29,7 @@ setup_chroot()
   # CC="gcc -m32" LDSHARED="gcc -m32 -shared" LDFLAGS="-m32 -shared" linux32 python setup.py build
   # when travis updates to ubuntu 14.04
   DIR=$1
+  set -u
   sudo apt-get -qq -y --force-yes install debootstrap eatmydata
   sudo debootstrap --variant=buildd --include=fakeroot,build-essential --arch=$ARCH --foreign $DIST $DIR
   sudo chroot $DIR ./debootstrap/debootstrap --second-stage
@@ -37,7 +38,9 @@ setup_chroot()
   echo deb http://archive.ubuntu.com/ubuntu/ saucy-updates main restricted universe multiverse | sudo tee -a $DIR/etc/apt/sources.list
   echo deb http://security.ubuntu.com/ubuntu saucy-security  main restricted universe multiverse | sudo tee -a $DIR/etc/apt/sources.list
   sudo chroot $DIR bash -c "apt-get update"
-  sudo chroot $DIR bash -c "apt-get install -qq -y --force-yes eatmydata libatlas-dev libatlas-base-dev gfortran python-dev python-nose"
+  sudo chroot $DIR bash -c "apt-get install -qq -y --force-yes eatmydata"
+  echo /usr/lib/libeatmydata/libeatmydata.so | sudo tee -a $DIR/etc/ld.so.preload
+  sudo chroot $DIR bash -c "apt-get install -qq -y --force-yes libatlas-dev libatlas-base-dev gfortran python-dev python-nose python-pip"
 }
 
 setup_bento()
@@ -65,14 +68,16 @@ setup_bento()
 
   # In-place numpy build
   $BENTO_ROOT/bentomaker build -i -j
+
+  # Prepend to PYTHONPATH so tests can be run
+  export PYTHONPATH=$PWD:$PYTHONPATH
 }
 
 run_test()
 {
   # We change directories to make sure that python won't find the copy
   # of numpy in the source directory.
-  export PYTHONPATH=$PWD:$PYTHONPATH
-  mkdir empty
+  mkdir -p empty
   cd empty
   INSTALLDIR=$(python -c "import os; import numpy; print(os.path.dirname(numpy.__file__))")
   export PYTHONWARNINGS=default
