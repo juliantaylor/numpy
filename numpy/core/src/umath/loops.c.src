@@ -1776,7 +1776,7 @@ NPY_NO_EXPORT void
 {
     if (IS_BINARY_REDUCE) {
         @type@ max;
-        char * largs[3] = {&max, args[1], &max};
+        char * largs[3] = {(char*)&max, args[1], (char*)&max};
         npy_intp lsteps[3] = {0, steps[1], 0};
         @TYPE@_maximum(largs, dimensions, lsteps, func);
         BINARY_REDUCE_LOOP(@type@) {
@@ -1794,6 +1794,30 @@ NPY_NO_EXPORT void
     }
 }
 
+
+NPY_NO_EXPORT void
+@TYPE@_logaddexp2(char **args, npy_intp *dimensions, npy_intp *steps, void * func)
+{
+    if (IS_BINARY_REDUCE) {
+        @type@ max;
+        char * largs[3] = {(char*)&max, args[1], (char*)&max};
+        npy_intp lsteps[3] = {0, steps[1], 0};
+        @TYPE@_maximum(largs, dimensions, lsteps, func);
+        BINARY_REDUCE_LOOP(@type@) {
+            double v = *(@type@ *)ip2;
+            io1 += npy_exp2(v - max);
+        }
+        *((@type@ *)iop1) = npy_log2(io1) + max;
+    }
+    else {
+        BINARY_LOOP {
+            const double in1 = *(@type@ *)ip1;
+            const double in2 = *(@type@ *)ip2;
+            *((@type@ *)op1) = npy_logaddexp2(in1, in2);
+        }
+    }
+}
+
 #define @TYPE@_true_divide @TYPE@_divide
 
 /**end repeat**/
@@ -1806,11 +1830,52 @@ NPY_NO_EXPORT void
 
 
 NPY_NO_EXPORT void
-HALF_logaddexp(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func))
+HALF_maximum(char **args, npy_intp *dimensions, npy_intp *steps, void * func);
+
+NPY_NO_EXPORT void
+HALF_logaddexp(char **args, npy_intp *dimensions, npy_intp *steps, void * func)
 {
-    UNARY_LOOP {
-        const npy_half in1 = *(npy_half *)ip1;
-        *(npy_half *)op1 = (in1);
+    if (IS_BINARY_REDUCE) {
+        npy_half max;
+        char * largs[3] = {(char*)&max, args[1], (char*)&max};
+        npy_intp lsteps[3] = {0, steps[1], 0};
+        HALF_maximum(largs, dimensions, lsteps, func);
+        BINARY_REDUCE_LOOP(npy_half) {
+            double v = npy_half_to_double(*(npy_half *)ip2);
+            io1 += npy_exp(v - max);
+        }
+        *((npy_half *)iop1) = npy_double_to_half(npy_log(io1) + max);
+    }
+    else {
+        BINARY_LOOP {
+            const double in1 = npy_half_to_double(*(npy_half *)ip1);
+            const double in2 = npy_half_to_double(*(npy_half *)ip2);
+            *((npy_half *)op1) = npy_double_to_half(npy_logaddexp(in1, in2));
+        }
+    }
+}
+
+
+NPY_NO_EXPORT void
+HALF_logaddexp2(char **args, npy_intp *dimensions, npy_intp *steps, void * func)
+{
+    if (IS_BINARY_REDUCE) {
+        npy_half max;
+        char * largs[3] = {(char*)&max, args[1], (char*)&max};
+        npy_intp lsteps[3] = {0, steps[1], 0};
+        HALF_maximum(largs, dimensions, lsteps, func);
+        BINARY_REDUCE_LOOP(npy_half) {
+            double v = npy_half_to_double(*(npy_half *)ip2);
+            io1 += npy_exp2(v - max);
+        }
+        *((npy_half *)iop1) = npy_double_to_half(npy_log2(io1) + max);
+    }
+    else {
+        BINARY_LOOP {
+            const double in1 = npy_half_to_double(*(npy_half *)ip1);
+            const double in2 = npy_half_to_double(*(npy_half *)ip2);
+            *((npy_half *)op1) = npy_double_to_half(npy_logaddexp2(in1, in2));
+        }
     }
 }
 

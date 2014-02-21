@@ -477,13 +477,12 @@ defdict = {
           docstrings.get('numpy.core.umath.logaddexp'),
           None,
           TD(flts),
-          TD(flts, f="logaddexp", astype={'e':'f'})
           ),
 'logaddexp2':
     Ufunc(2, 1, None,
           docstrings.get('numpy.core.umath.logaddexp2'),
           None,
-          TD(flts, f="logaddexp2", astype={'e':'f'})
+          TD(flts),
           ),
 'bitwise_and':
     Ufunc(2, 1, One,
