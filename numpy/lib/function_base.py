@@ -2848,9 +2848,12 @@ def _median(a, axis=None, out=None, overwrite_input=False):
     # can't be reasonably be implemented in terms of percentile as we have to
     # call mean to not break astropy
     a = np.asanyarray(a)
-    if axis is not None and axis >= a.ndim:
-        raise IndexError(
-            "axis %d out of bounds (%d)" % (axis, a.ndim))
+    if axis is not None:
+        if axis < 0:
+            axis += a.ndim
+        if axis < 0 or axis >= a.ndim:
+            raise IndexError(
+                "axis %d out of bounds (%d)" % (axis, a.ndim))
     
     #Set the partition indexes    
     if axis is None:
