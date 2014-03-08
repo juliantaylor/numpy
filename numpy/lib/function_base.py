@@ -2849,11 +2849,12 @@ def _median(a, axis=None, out=None, overwrite_input=False):
     # call mean to not break astropy
     a = np.asanyarray(a)
     if axis is not None:
+        axis_orig = axis
         if axis < 0:
             axis += a.ndim
         if axis < 0 or axis >= a.ndim:
-            raise IndexError(
-                "axis %d out of bounds (%d)" % (axis, a.ndim))
+            raise ValueError(
+                "axis %d out of bounds (%d)" % (axis_orig, a.ndim))
     
     #Set the partition indexes    
     if axis is None:
