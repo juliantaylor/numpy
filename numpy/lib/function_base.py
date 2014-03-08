@@ -2851,33 +2851,31 @@ def _median(a, axis=None, out=None, overwrite_input=False):
     if axis is not None and axis >= a.ndim:
         raise IndexError(
             "axis %d out of bounds (%d)" % (axis, a.ndim))
-
+    
+    #Set the partition indexes    
+    if axis is None:
+        sz = a.size
+    else:
+        sz = a.shape[axis]
+    if sz % 2 == 0:
+        szh = sz // 2
+        kth = [szh - 1, szh]
+    else:
+        kth = [(sz - 1) // 2]
+    #Check if the array contains any nan's
+    if np.issubdtype(a.dtype, np.inexact):
+        kth.append(-1)
+    
     if overwrite_input:
         if axis is None:
             part = a.ravel()
-            sz = part.size
-            if sz % 2 == 0:
-                szh = sz // 2
-                part.partition((szh - 1, szh))
-            else:
-                part.partition((sz - 1) // 2)
+            part.partition(kth)            
         else:
-            sz = a.shape[axis]
-            if sz % 2 == 0:
-                szh = sz // 2
-                a.partition((szh - 1, szh), axis=axis)
-            else:
-                a.partition((sz - 1) // 2, axis=axis)
+            a.partition(kth, axis=axis)            
             part = a
     else:
-        if axis is None:
-            sz = a.size
-        else:
-            sz = a.shape[axis]
-        if sz % 2 == 0:
-            part = partition(a, ((sz // 2) - 1, sz // 2), axis=axis)
-        else:
-            part = partition(a, (sz - 1) // 2, axis=axis)
+        part = partition(a, kth, axis=axis)
+        
     if part.shape == ():
         # make 0-D arrays work
         return part.item()
