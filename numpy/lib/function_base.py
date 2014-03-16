@@ -2848,15 +2848,8 @@ def _median(a, axis=None, out=None, overwrite_input=False):
     # can't be reasonably be implemented in terms of percentile as we have to
     # call mean to not break astropy
     a = np.asanyarray(a)
-    if axis is not None:
-        axis_orig = axis
-        if axis < 0:
-            axis += a.ndim
-        if axis < 0 or axis >= a.ndim:
-            raise ValueError(
-                "axis %d out of bounds (%d)" % (axis_orig, a.ndim))
-    
-    #Set the partition indexes    
+
+    #Set the partition indexes
     if axis is None:
         sz = a.size
     else:
@@ -2869,13 +2862,13 @@ def _median(a, axis=None, out=None, overwrite_input=False):
     #Check if the array contains any nan's
     if np.issubdtype(a.dtype, np.inexact):
         kth.append(-1)
-    
+
     if overwrite_input:
         if axis is None:
             part = a.ravel()
-            part.partition(kth)            
+            part.partition(kth)
         else:
-            a.partition(kth, axis=axis)            
+            a.partition(kth, axis=axis)
             part = a
     else:
         part = partition(a, kth, axis=axis)
@@ -2885,6 +2878,7 @@ def _median(a, axis=None, out=None, overwrite_input=False):
         return part.item()
     if axis is None:
         axis = 0
+
     indexer = [slice(None)] * part.ndim
     index = part.shape[axis] // 2
     if part.shape[axis] % 2 == 1:
@@ -2892,20 +2886,17 @@ def _median(a, axis=None, out=None, overwrite_input=False):
         indexer[axis] = slice(index, index+1)
     else:
         indexer[axis] = slice(index-1, index+1)
+
     #Check if the array contains any nan's
     if np.issubdtype(a.dtype, np.inexact):
-        if part.ndim <= 1:
-            if np.isnan(part[-1]):
-                return np.nan
-            else:
-                return mean(part[indexer], axis=axis, out=out)
-        else:       
-            nan_indexer = [slice(None)] * part.ndim
-            nan_indexer[axis] = slice(-1, None)
-            ids = np.isnan(part[nan_indexer].squeeze(axis))
-            out = np.asanyarray(mean(part[indexer], axis=axis, out=out))
-            out[ids] = np.nan
-            return out
+        out = mean(part[indexer], axis=axis, out=out)
+        part = np.rollaxis(part, axis, part.ndim)
+        n = np.isnan(part[...,-1])
+        if out.ndim == 0:
+            out = a.dtype.type(np.nan) if n == True else out
+        else:
+            out[n] = np.nan
+        return out
     else: 
         #if there are no nans
         # Use mean in odd and even case to coerce data type

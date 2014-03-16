@@ -1860,6 +1860,7 @@ class TestMedian(TestCase):
         assert_equal(a[0], np.median(a))
         a = np.array([0.0444502, 0.141249, 0.0463301])
         assert_equal(a[-1], np.median(a))
+        assert_equal(np.median(a).ndim, 0)
 
     def test_axis_keyword(self):
         a3 = np.array([[2, 3],
@@ -1932,6 +1933,12 @@ class TestMedian(TestCase):
 
         a = MySubClass([1,2,3])
         assert_equal(np.median(a), -7)
+
+    def test_object(self):
+        o = np.arange(7.);
+        assert_(type(np.median(o.astype(object))), float)
+        o[2] = np.nan
+        assert_(type(np.median(o.astype(object))), float)
         
     def test_nan_behavior(self):
         a = np.arange(24, dtype=float)
@@ -1944,6 +1951,7 @@ class TestMedian(TestCase):
 
         #no axis                
         assert_equal(np.median(a), np.nan)
+        assert_equal(np.median(a).ndim, 0)
         #axis0
         b = np.median(np.arange(24, dtype=float).reshape(2, 3, 4), 0)
         b[2, 3] = np.nan; b[1, 2] = np.nan
@@ -1952,6 +1960,10 @@ class TestMedian(TestCase):
         b = np.median(np.arange(24, dtype=float).reshape(2, 3, 4), 1)
         b[1, 3] = np.nan; b[1, 2] = np.nan
         assert_equal(np.median(a, 1), b)
+        #axis02
+        b = np.median(np.arange(24, dtype=float).reshape(2, 3, 4), (0, 2))
+        b[1] = np.nan; b[2] = np.nan
+        assert_equal(np.median(a, (0, 2)), b)
 
     def test_extended_axis(self):
         o = np.random.normal(size=(71, 23))
@@ -2005,7 +2017,6 @@ class TestMedian(TestCase):
                      (1, 1, 1, 1))
         assert_equal(np.median(d, axis=(0, 1, 3), keepdims=True).shape,
                      (1, 1, 7, 1))
-
 
 
 class TestAdd_newdoc_ufunc(TestCase):
