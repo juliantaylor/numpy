@@ -2892,9 +2892,24 @@ def _median(a, axis=None, out=None, overwrite_input=False):
         indexer[axis] = slice(index, index+1)
     else:
         indexer[axis] = slice(index-1, index+1)
-    # Use mean in odd and even case to coerce data type
-    # and check, use out array.
-    return mean(part[indexer], axis=axis, out=out)
+    #Check if the array contains any nan's
+    if np.issubdtype(a.dtype, np.inexact):
+        if part.ndim <= 1:
+            if np.isnan(part[-1]):
+                return np.nan
+            else:
+                return mean(part[indexer], axis=axis, out=out)
+        else:       
+            nan_indexer = [slice(None)] * part.ndim
+            nan_indexer[axis] = slice(-1, None)
+            ids = np.isnan(part[nan_indexer].squeeze(axis))
+            out = np.asanyarray(mean(part[indexer], axis=axis, out=out))
+            out[ids] = np.nan
+            return out
+    else: #if there are no nans
+        # Use mean in odd and even case to coerce data type
+        # and check, use out array.
+        return mean(part[indexer], axis=axis, out=out)
 
 
 def percentile(a, q, axis=None, out=None,
@@ -3017,6 +3032,7 @@ def percentile(a, q, axis=None, out=None,
 def _percentile(a, q, axis=None, out=None,
                 overwrite_input=False, interpolation='linear', keepdims=False):
     a = asarray(a)
+    q = asarray(q)
     if q.ndim == 0:
         # Do not allow 0-d arrays because following code fails for scalar
         zerod = True
