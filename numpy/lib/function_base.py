@@ -2906,7 +2906,8 @@ def _median(a, axis=None, out=None, overwrite_input=False):
             out = np.asanyarray(mean(part[indexer], axis=axis, out=out))
             out[ids] = np.nan
             return out
-    else: #if there are no nans
+    else: 
+        #if there are no nans
         # Use mean in odd and even case to coerce data type
         # and check, use out array.
         return mean(part[indexer], axis=axis, out=out)
@@ -3032,7 +3033,6 @@ def percentile(a, q, axis=None, out=None,
 def _percentile(a, q, axis=None, out=None,
                 overwrite_input=False, interpolation='linear', keepdims=False):
     a = asarray(a)
-    q = asarray(q)
     if q.ndim == 0:
         # Do not allow 0-d arrays because following code fails for scalar
         zerod = True
