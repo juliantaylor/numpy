@@ -1361,8 +1361,46 @@ PyArray_TransferMaskedStridedToNDim(npy_intp ndim,
 /***************************************************************************/
 
 /**begin repeat
+ * #size = 1, 2, 4, 8#
+ * #type = npy_int8, npy_int16, npy_int32, npy_int64#
+ */
+static NPY_INLINE int
+check_and_adjust_index_@size@(@type@ *index, @type@ max_item, int axis,
+                              PyThreadState * _save)
+{
+    /* Check that index is valid, taking into account negative indices */
+    if (NPY_UNLIKELY((*index < -max_item) || (*index >= max_item))) {
+        NPY_END_THREADS;
+        /* Try to be as clear as possible about what went wrong. */
+        if (axis >= 0) {
+            PyErr_Format(PyExc_IndexError,
+                         "index %"NPY_INTP_FMT" is out of bounds "
+                         "for axis %d with size %"NPY_INTP_FMT,
+                         *index, axis, max_item);
+        } else {
+            PyErr_Format(PyExc_IndexError,
+                         "index %"NPY_INTP_FMT" is out of bounds "
+                         "for size %"NPY_INTP_FMT, *index, max_item);
+        }
+        return -1;
+    }
+    /* adjust negative indices */
+    if (*index < 0) {
+        *index += max_item;
+    }
+    return 0;
+}
+
+/**end repeat**/
+
+/**begin repeat
  * #name = set, get#
  * #isget = 0, 1#
+ */
+
+/**begin repeat1
+ * #size = 1, 2, 4, 8#
+ * #type = npy_int8, npy_int16, npy_int32, npy_int64#
  */
 
 /*
@@ -1371,15 +1409,15 @@ PyArray_TransferMaskedStridedToNDim(npy_intp ndim,
  * can be trivally iterated (single stride, aligned, no casting necessary).
  */
 NPY_NO_EXPORT int
-mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
-                       PyArrayObject *result)
+mapiter_trivial_@name@_@size@(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result)
 {
     char *base_ptr, *self_ptr, *ind_ptr, *result_ptr;
     npy_intp self_stride, ind_stride, result_stride;
     npy_intp fancy_dim = PyArray_DIM(self, 0);
 
     npy_intp itersize;
-    npy_intp indval;
+    @type@ indval;
 
     int is_aligned = PyArray_ISALIGNED(self) && PyArray_ISALIGNED(result);
     int needs_api = PyDataType_REFCHK(PyArray_DESCR(self));
@@ -1400,8 +1438,8 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
 #if !@isget@
     /* Check the indices beforehand */
     while (itersize--) {
-        indval = *((npy_intp*)ind_ptr);
-        if (check_and_adjust_index(&indval, fancy_dim, 1, _save) < 0 ) {
+        indval = *((@type@*)ind_ptr);
+        if (check_and_adjust_index_@size@(&indval, fancy_dim, 1, _save) < 0 ) {
             return -1;
         }
         ind_ptr += ind_stride;
@@ -1418,7 +1456,7 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
     /* Optimization for aligned types that do not need the api */
     switch ((is_aligned && !needs_api) ? PyArray_ITEMSIZE(self) : 0) {
 
-/**begin repeat1
+/**begin repeat2
  * #elsize = 1, 2, 4, 8, 0#
  * #copytype = npy_uint8, npy_uint16, npy_uint32, npy_uint64, 0#
  */
@@ -1429,9 +1467,9 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
     default:
 #endif
         while (itersize--) {
-            indval = *((npy_intp*)ind_ptr);
+            indval = *((@type@*)ind_ptr);
 #if @isget@
-            if (check_and_adjust_index(&indval, fancy_dim, 1, _save) < 0 ) {
+            if (check_and_adjust_index_@size@(&indval, fancy_dim, 1, _save) < 0 ) {
                 return -1;
             }
 #else
@@ -1461,13 +1499,15 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
         }
         break;
 
-/**end repeat1**/
+/**end repeat2**/
     }
 
     NPY_END_THREADS;
 
     return 0;
 }
+
+/**end repeat1**/
 
 
 /*

@@ -1487,7 +1487,6 @@ array_subscript(PyArrayObject *self, PyObject *op)
         /* Check if the index is simple enough */
         if (PyArray_TRIVIALLY_ITERABLE(ind) &&
                 /* Check if the type is equivalent to INTP */
-                PyArray_ITEMSIZE(ind) == sizeof(npy_intp) &&
                 PyArray_DESCR(ind)->kind == 'i' &&
                 PyArray_ISALIGNED(ind) &&
                 PyDataType_ISNOTSWAPPED(PyArray_DESCR(ind))) {
@@ -1506,7 +1505,20 @@ array_subscript(PyArrayObject *self, PyObject *op)
                 goto finish;
             }
 
-            if (mapiter_trivial_get(self, ind, (PyArrayObject *)result) < 0) {
+            int r;
+            if (PyArray_ITEMSIZE(ind) == 8) {
+                r = mapiter_trivial_get_8(self, ind, (PyArrayObject *)result);
+            }
+            else if (PyArray_ITEMSIZE(ind) == 4) {
+                r = mapiter_trivial_get_4(self, ind, (PyArrayObject *)result);
+            }
+            else if (PyArray_ITEMSIZE(ind) == 2) {
+                r = mapiter_trivial_get_2(self, ind, (PyArrayObject *)result);
+            }
+            else if (PyArray_ITEMSIZE(ind) == 1) {
+                r = mapiter_trivial_get_1(self, ind, (PyArrayObject *)result);
+            }
+            if (r < 0) {
                 Py_DECREF(result);
                 result = NULL;
                 goto finish;
@@ -1864,14 +1876,25 @@ array_assign_subscript(PyArrayObject *self, PyObject *ind, PyObject *op)
                 (PyArray_EQUIVALENTLY_ITERABLE(ind, tmp_arr) ||
                  (PyArray_NDIM(tmp_arr) == 0 &&
                         PyArray_TRIVIALLY_ITERABLE(tmp_arr))) &&
-                /* Check if the type is equivalent to INTP */
-                PyArray_ITEMSIZE(ind) == sizeof(npy_intp) &&
                 PyArray_DESCR(ind)->kind == 'i' &&
                 PyArray_ISALIGNED(ind) &&
                 PyDataType_ISNOTSWAPPED(PyArray_DESCR(ind))) {
 
             /* trivial_set checks the index for us */
-            if (mapiter_trivial_set(self, ind, tmp_arr) < 0) {
+            int r;
+            if (PyArray_ITEMSIZE(ind) == 8) {
+                r = mapiter_trivial_set_8(self, ind, tmp_arr);
+            }
+            else if (PyArray_ITEMSIZE(ind) == 4) {
+                r = mapiter_trivial_set_4(self, ind, tmp_arr);
+            }
+            else if (PyArray_ITEMSIZE(ind) == 2) {
+                r = mapiter_trivial_set_2(self, ind, tmp_arr);
+            }
+            else if (PyArray_ITEMSIZE(ind) == 1) {
+                r = mapiter_trivial_set_1(self, ind, tmp_arr);
+            }
+            if (r < 0) {
                 goto fail;
             }
             goto success;
