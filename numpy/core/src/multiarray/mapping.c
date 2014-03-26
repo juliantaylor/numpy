@@ -177,6 +177,25 @@ prepare_index(PyArrayObject *self, PyObject *index,
     int index_type = 0;
     int ellipsis_pos = -1;
 
+    if (PyIndex_Check(index)) {
+        Py_ssize_t i;
+        i = PyNumber_AsSsize_t(index, PyExc_IndexError);
+        if (i == -1 && PyErr_Occurred() && PyArray_NDIM(self) != 0) {
+            PyErr_Clear();
+        }
+        else {
+            index_type |= HAS_INTEGER;
+            indices[0].object = NULL;
+            indices[0].value = i;
+            indices[0].type = HAS_INTEGER;
+            *num = 1;
+            *ndim = 0;
+            *out_fancy_ndim = 0;
+            return HAS_INTEGER;
+        }
+    }
+
+
     /*
      * The index might be a multi-dimensional index, but not yet a tuple
      * this makes it a tuple in that case.
