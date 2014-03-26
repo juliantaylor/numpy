@@ -112,6 +112,7 @@ gentype_alloc(PyTypeObject *type, Py_ssize_t nitems)
     const size_t size = _PyObject_VAR_SIZE(type, nitems + 1);
 
     obj = (PyObject *)PyObject_Malloc(size);
+    memset(obj, 0, size);
     if (type->tp_itemsize == 0) {
         PyObject_INIT(obj, type);
     }
