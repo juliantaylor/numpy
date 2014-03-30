@@ -3122,31 +3122,29 @@ def _percentile(a, q, axis=None, out=None,
         indices_above[indices_above > Nx - 1] = Nx - 1
 
         weights_above = indices - indices_below
-        weights_below = 1.0 - weights_above
 
         weights_shape = [1, ] * ap.ndim
         weights_shape[axis] = len(indices)
-        weights_below.shape = weights_shape
         weights_above.shape = weights_shape
 
         ap.partition(concatenate((indices_below, indices_above)), axis=axis)
-        x1 = take(ap, indices_below, axis=axis) * weights_below
-        x2 = take(ap, indices_above, axis=axis) * weights_above
+        low = take(ap, indices_below, axis=axis)
+        high = take(ap, indices_above, axis=axis)
+        r = low + (high - low) * weights_above
 
         # ensure axis with qth is first
-        x1 = np.rollaxis(x1, axis, 0)
-        x2 = np.rollaxis(x2, axis, 0)
+        r = np.rollaxis(r, axis, 0)
 
         if zerod:
-            x1 = x1.squeeze(0)
-            x2 = x2.squeeze(0)
+            r = r.squeeze(0)
 
         if out is not None:
-            r = add(x1, x2, out=out)
-        else:
-            r = add(x1, x2)
+            out[...] = r
 
-    return r
+    if r.ndim == 0:
+        return r.dtype.type(r)
+    else:
+        return r
 
 
 def trapz(y, x=None, dx=1.0, axis=-1):
