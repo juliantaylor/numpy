@@ -334,10 +334,40 @@ PyArray_GenericInplaceUnaryFunction(PyArrayObject *m1, PyObject *op)
     return PyObject_CallFunctionObjArgs(op, m1, m1, NULL);
 }
 
+ 
+
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+
+void show_backtrace (void) {
+  unw_cursor_t cursor; unw_context_t uc;
+  unw_word_t ip, sp;
+
+  unw_getcontext(&uc);
+  unw_init_local(&cursor, &uc);
+  while (unw_step(&cursor) > 0) {
+char name[500];
+unw_word_t off;
+unw_proc_info_t info;
+    unw_get_reg(&cursor, UNW_REG_IP, &ip);
+    unw_get_reg(&cursor, UNW_REG_SP, &sp);
+    unw_get_proc_info(&cursor, &info);
+unw_get_proc_name(&cursor, name, 500, &off);
+    printf ("ip = %lx, sp = %lx %s %d\n", (long) ip, (long) sp, name, (int)off);
+//    printf ("ip = %lx, sp = %lx %lx\n", (long) ip, (long) sp, (long)info.start_ip);
+    if ((long)info.start_ip == (long)&PyEval_EvalFrameEx) {
+        break;
+    }
+  }
+}
+
 static PyObject *
 array_add(PyArrayObject *m1, PyObject *m2)
 {
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__add__", "__radd__", 0);
+    show_backtrace();
+printf("%p\n", PyNumber_Add);
+printf("%p\n", PyEval_EvalFrameEx);
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.add);
 }
 

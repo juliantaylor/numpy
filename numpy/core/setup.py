@@ -850,7 +850,7 @@ def configuration(parent_package='',top_path=None):
                                  join(codegen_dir, 'generate_numpy_api.py'),
                                  join('*.py')],
                          depends = deps + multiarray_deps,
-                         libraries = ['npymath', 'npysort'])
+                         libraries = ['npymath', 'npysort', 'unwind'])
 
     #######################################################################
     #                           umath module                              #
