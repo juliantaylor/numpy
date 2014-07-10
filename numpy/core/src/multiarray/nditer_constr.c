@@ -17,6 +17,7 @@
 
 #include "arrayobject.h"
 #include "scalarmathmodule.h"
+#include "alloc.h"
 
 /* Internal helper functions private to this file */
 static int
@@ -2400,8 +2401,8 @@ npyiter_get_common_dtype(int nop, PyArrayObject **op,
 {
     int iop;
     npy_intp narrs = 0, ndtypes = 0;
-    PyArrayObject *arrs[NPY_MAXARGS];
-    PyArray_Descr *dtypes[NPY_MAXARGS];
+    PyArrayObject *arrs[nop];
+    PyArray_Descr *dtypes[nop];
     PyArray_Descr *ret;
 
     NPY_IT_DBG_PRINT("Iterator: Getting a common data type from operands\n");
