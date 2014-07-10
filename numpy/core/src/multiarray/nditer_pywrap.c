@@ -598,6 +598,27 @@ npyiter_convert_op_axes(PyObject *op_axes_in, npy_intp nop,
     return 1;
 }
 
+static int
+npyiter_get_nop(PyObject * op_in)
+{
+    if (PyTuple_Check(op_in) || PyList_Check(op_in)) {
+        int nop = PySequence_Size(op_in);
+        if (nop == 0) {
+            PyErr_SetString(PyExc_ValueError,
+                            "Must provide at least one operand");
+            return 0;
+        }
+        if (nop > NPY_MAXARGS) { /* TODO remove */
+            PyErr_SetString(PyExc_ValueError, "Too many operands");
+            return 0;
+        }
+        return nop;
+    }
+    else {
+        return 1;
+    }
+}
+
 /*
  * Converts the operand array and op_flags array into the form
  * NpyIter_AdvancedNew needs.  Sets nop, and on success, each
@@ -606,23 +627,12 @@ npyiter_convert_op_axes(PyObject *op_axes_in, npy_intp nop,
 static int
 npyiter_convert_ops(PyObject *op_in, PyObject *op_flags_in,
                     PyArrayObject **op, npy_uint32 *op_flags,
-                    int *nop_out)
+                    const int nop)
 {
-    int iop, nop;
+    int iop;
 
     /* nop and op */
     if (PyTuple_Check(op_in) || PyList_Check(op_in)) {
-        nop = PySequence_Size(op_in);
-        if (nop == 0) {
-            PyErr_SetString(PyExc_ValueError,
-                    "Must provide at least one operand");
-            return 0;
-        }
-        if (nop > NPY_MAXARGS) {
-            PyErr_SetString(PyExc_ValueError, "Too many operands");
-            return 0;
-        }
-
         for (iop = 0; iop < nop; ++iop) {
             PyObject *item = PySequence_GetItem(op_in, iop);
             if (item == NULL) {
@@ -641,13 +651,10 @@ npyiter_convert_ops(PyObject *op_in, PyObject *op_flags_in,
         }
     }
     else {
-        nop = 1;
         /* Is converted to an array after op flags are retrieved */
         Py_INCREF(op_in);
         op[0] = (PyArrayObject *)op_in;
     }
-
-    *nop_out = nop;
 
     /* op_flags */
     if (op_flags_in == NULL || op_flags_in == Py_None) {
@@ -670,7 +677,6 @@ npyiter_convert_ops(PyObject *op_in, PyObject *op_flags_in,
         for (iop = 0; iop < nop; ++iop) {
             Py_XDECREF(op[iop]);
         }
-        *nop_out = 0;
         return 0;
     }
 
@@ -696,7 +702,6 @@ npyiter_convert_ops(PyObject *op_in, PyObject *op_flags_in,
                 for (iop = 0; iop < nop; ++iop) {
                     Py_DECREF(op[iop]);
                 }
-                *nop_out = 0;
                 return 0;
             }
             Py_DECREF(op[iop]);
@@ -718,7 +723,7 @@ npyiter_init(NewNpyArrayIterObject *self, PyObject *args, PyObject *kwds)
     PyObject *op_in = NULL, *op_flags_in = NULL,
                 *op_dtypes_in = NULL, *op_axes_in = NULL;
 
-    int iop, nop = 0;
+    int iop, nop;
     PyArrayObject *op[NPY_MAXARGS];
     npy_uint32 flags = 0;
     NPY_ORDER order = NPY_KEEPORDER;
@@ -754,9 +759,14 @@ npyiter_init(NewNpyArrayIterObject *self, PyObject *args, PyObject *kwds)
     /* Set the dtypes and ops to all NULL to start */
     memset(op_request_dtypes, 0, sizeof(op_request_dtypes));
 
+    nop = npyiter_get_nop(op_in);
+    if (nop <= 0) {
+        goto fail;
+    }
+
     /* op and op_flags */
-    if (npyiter_convert_ops(op_in, op_flags_in, op, op_flags, &nop)
-                                                        != 1) {
+    if (npyiter_convert_ops(op_in, op_flags_in, op, op_flags, nop) != 1) {
+        nop = 0;
         goto fail;
     }
 
@@ -947,9 +957,13 @@ NpyIter_NestedIters(PyObject *NPY_UNUSED(self),
         Py_DECREF(item);
     }
 
+    nop = npyiter_get_nop(op_in);
+    if (nop <= 0) {
+        return NULL;
+    }
+
     /* op and op_flags */
-    if (npyiter_convert_ops(op_in, op_flags_in, op, op_flags, &nop)
-                                                        != 1) {
+    if (npyiter_convert_ops(op_in, op_flags_in, op, op_flags, nop) != 1) {
         return NULL;
     }
 
