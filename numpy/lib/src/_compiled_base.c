@@ -6,6 +6,7 @@
 #include "npy_config.h"
 #include "numpy/ufuncobject.h"
 #include "string.h"
+#include "alloc.h"
 
 
 static npy_intp
@@ -876,16 +877,13 @@ arr_ravel_multi_index(PyObject *self, PyObject *args, PyObject *kwds)
     NPY_ORDER order = NPY_CORDER;
     NPY_CLIPMODE modes[NPY_MAXDIMS];
 
-    PyArrayObject *op[NPY_MAXARGS];
-    PyArray_Descr *dtype[NPY_MAXARGS];
-    npy_uint32 op_flags[NPY_MAXARGS];
+    PyArrayObject **op = NULL;
+    PyArray_Descr **dtype;
+    npy_uint32 *op_flags;
 
     NpyIter *iter = NULL;
 
     char *kwlist[] = {"multi_index", "dims", "mode", "order", NULL};
-
-    memset(op, 0, sizeof(op));
-    dtype[0] = NULL;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds,
                         "OO&|OO&:ravel_multi_index", kwlist,
@@ -896,15 +894,15 @@ arr_ravel_multi_index(PyObject *self, PyObject *args, PyObject *kwds)
         goto fail;
     }
 
-    if (dimensions.len+1 > NPY_MAXARGS) {
-        PyErr_SetString(PyExc_ValueError,
-                    "too many dimensions passed to ravel_multi_index");
-        goto fail;
-    }
-
     if (!PyArray_ConvertClipmodeSequence(mode0, modes, dimensions.len)) {
        goto fail;
     }
+
+
+    op = PyDataMem_NEW((dimensions.len + 1) * sizeof(*op) * 3);
+    dtype = (PyArray_Descr**)(op + (dimensions.len + 1));
+    memset(op, 0, (dimensions.len + 1 + 1) * sizeof(*op)); // dtype[0] = NULL;
+    op_flags = (npy_uint32*)(dtype + (dimensions.len + 1));
 
     switch (order) {
         case NPY_CORDER:
@@ -987,15 +985,19 @@ arr_ravel_multi_index(PyObject *self, PyObject *args, PyObject *kwds)
     }
     PyDimMem_FREE(dimensions.ptr);
     NpyIter_Deallocate(iter);
+    PyDataMem_FREE(op); // (dimensions.len + 1) * sizeof(*op) * 3);
     return PyArray_Return(ret);
 
 fail:
-    Py_XDECREF(dtype[0]);
+    if (op) {
+        Py_XDECREF(dtype[0]);
+    }
     for (i = 0; i < dimensions.len; ++i) {
         Py_XDECREF(op[i]);
     }
     PyDimMem_FREE(dimensions.ptr);
     NpyIter_Deallocate(iter);
+    PyDataMem_FREE(op); // (dimensions.len + 1) * sizeof(*op) * 3);
     return NULL;
 }
 
