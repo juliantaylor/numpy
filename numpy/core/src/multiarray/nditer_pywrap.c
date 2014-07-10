@@ -15,6 +15,7 @@
 #include <numpy/arrayobject.h>
 #include "npy_config.h"
 #include "npy_pycompat.h"
+#include "alloc.h"
 
 typedef struct NewNpyArrayIterObject_tag NewNpyArrayIterObject;
 
@@ -33,7 +34,7 @@ struct NewNpyArrayIterObject_tag {
     PyArray_Descr **dtypes;
     PyArrayObject **operands;
     npy_intp *innerstrides, *innerloopsizeptr;
-    char readflags[NPY_MAXARGS];
+    char readflags[NPY_MAXARGS]; /* TODO cache values, add nop guard to usage */
     char writeflags[NPY_MAXARGS];
 };
 
@@ -724,17 +725,18 @@ npyiter_init(NewNpyArrayIterObject *self, PyObject *args, PyObject *kwds)
                 *op_dtypes_in = NULL, *op_axes_in = NULL;
 
     int iop, nop;
-    PyArrayObject *op[NPY_MAXARGS];
     npy_uint32 flags = 0;
     NPY_ORDER order = NPY_KEEPORDER;
     NPY_CASTING casting = NPY_SAFE_CASTING;
-    npy_uint32 op_flags[NPY_MAXARGS];
-    PyArray_Descr *op_request_dtypes[NPY_MAXARGS];
     int oa_ndim = -1;
-    int op_axes_arrays[NPY_MAXARGS][NPY_MAXDIMS];
-    int *op_axes[NPY_MAXARGS];
     PyArray_Dims itershape = {NULL, 0};
     int buffersize = 0;
+    PyArrayObject **op = NULL;
+    PyArray_Descr **op_request_dtypes;
+    npy_uint32 *op_flags;
+    int **op_axes;
+    int *op_axes_arrays;
+    npy_intp alloc_size;
 
     if (self->iter != NULL) {
         PyErr_SetString(PyExc_ValueError,
@@ -756,13 +758,24 @@ npyiter_init(NewNpyArrayIterObject *self, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    /* Set the dtypes and ops to all NULL to start */
-    memset(op_request_dtypes, 0, sizeof(op_request_dtypes));
-
     nop = npyiter_get_nop(op_in);
+
+    alloc_size = nop *
+        (sizeof(*op) + sizeof(*op_request_dtypes) +
+         sizeof(*op_flags) + sizeof(*op_axes_arrays) * NPY_MAXDIMS +
+         sizeof(*op_axes));
+
     if (nop <= 0) {
         goto fail;
     }
+
+    op = npy_alloc_cache(alloc_size);
+    op_request_dtypes = (PyArray_Descr**)(op + nop);
+    op_flags = (npy_uint32*)(op_request_dtypes + nop);
+    op_axes = (int**)(op_flags + nop);
+    op_axes_arrays = (int*)(op_axes + nop);
+    memset(op_request_dtypes, 0, nop * sizeof(*op_request_dtypes));
+
 
     /* op and op_flags */
     if (npyiter_convert_ops(op_in, op_flags_in, op, op_flags, nop) != 1) {
@@ -781,7 +794,7 @@ npyiter_init(NewNpyArrayIterObject *self, PyObject *args, PyObject *kwds)
     if (op_axes_in != NULL && op_axes_in != Py_None) {
         /* Initialize to point to the op_axes arrays */
         for (iop = 0; iop < nop; ++iop) {
-            op_axes[iop] = op_axes_arrays[iop];
+            op_axes[iop] = &op_axes_arrays[iop * NPY_MAXDIMS];
         }
 
         if (npyiter_convert_op_axes(op_axes_in, nop,
@@ -839,6 +852,7 @@ npyiter_init(NewNpyArrayIterObject *self, PyObject *args, PyObject *kwds)
         Py_XDECREF(op_request_dtypes[iop]);
     }
 
+    npy_free_cache(op, alloc_size);
     return 0;
 
 fail:
@@ -847,6 +861,7 @@ fail:
         Py_XDECREF(op[iop]);
         Py_XDECREF(op_request_dtypes[iop]);
     }
+    npy_free_cache(op, alloc_size);
     return -1;
 }
 
@@ -1973,6 +1988,7 @@ npyiter_seq_item(NewNpyArrayIterObject *self, Py_ssize_t i)
     PyArray_Descr *dtype;
     int has_external_loop;
     Py_ssize_t i_orig = i;
+    int writeflag;
 
     if (self->iter == NULL || self->finished) {
         PyErr_SetString(PyExc_ValueError,
@@ -2008,7 +2024,7 @@ npyiter_seq_item(NewNpyArrayIterObject *self, Py_ssize_t i)
      * likely random junk, as if it were allocated with an
      * np.empty(...) call.
      */
-    if (!self->readflags[i]) {
+    if (!self->readflags[i]) { if reenabled needs to handle i >= NPY_MAXARGS
         PyErr_Format(PyExc_RuntimeError,
                 "Iterator operand %d is write-only", (int)i);
         return NULL;
@@ -2030,12 +2046,21 @@ npyiter_seq_item(NewNpyArrayIterObject *self, Py_ssize_t i)
         /* If the iterator is going over every element, return array scalars */
         ret_ndim = 0;
     }
+    if (i < NPY_MAXARGS) {
+        writeflag = self->writeflags[i] ? NPY_ARRAY_WRITEABLE : 0;
+    }
+    else {
+        char * buffer = npy_alloc_cache(NpyIter_GetNOp(self->iter));
+        NpyIter_GetWriteFlags(self->iter, buffer);
+        writeflag = buffer[i] ? NPY_ARRAY_WRITEABLE : 0;
+        npy_free_cache(buffer, NpyIter_GetNOp(self->iter));
+    }
 
     Py_INCREF(dtype);
     ret = (PyArrayObject *)PyArray_NewFromDescr(&PyArray_Type, dtype,
                         ret_ndim, &innerloopsize,
                         &innerstride, dataptr,
-                        self->writeflags[i] ? NPY_ARRAY_WRITEABLE : 0, NULL);
+                        writeflag, NULL);
     if (ret == NULL) {
         return NULL;
     }
