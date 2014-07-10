@@ -151,13 +151,6 @@ NpyIter_AdvancedNew(int nop, PyArrayObject **op_in, npy_uint32 flags,
 
     NPY_IT_TIME_POINT(c_start);
 
-    if (nop > NPY_MAXARGS) {
-        PyErr_Format(PyExc_ValueError,
-            "Cannot construct an iterator with more than %d operands "
-            "(%d were requested)", (int)NPY_MAXARGS, (int)nop);
-        return NULL;
-    }
-
     /*
      * Before 1.8, if `oa_ndim == 0`, this meant `op_axes != NULL` was an error.
      * With 1.8, `oa_ndim == -1` takes this role, while op_axes in that case

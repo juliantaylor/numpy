@@ -609,10 +609,6 @@ npyiter_get_nop(PyObject * op_in)
                             "Must provide at least one operand");
             return 0;
         }
-        if (nop > NPY_MAXARGS) { /* TODO remove */
-            PyErr_SetString(PyExc_ValueError, "Too many operands");
-            return 0;
-        }
         return nop;
     }
     else {
