@@ -878,19 +878,21 @@ NpyIter_NestedIters(PyObject *NPY_UNUSED(self),
             *op_flags_in = NULL, *op_dtypes_in = NULL;
 
     int iop, nop = 0, inest, nnest = 0;
-    PyArrayObject *op[NPY_MAXARGS];
     npy_uint32 flags = 0, flags_inner;
     NPY_ORDER order = NPY_KEEPORDER;
     NPY_CASTING casting = NPY_SAFE_CASTING;
-    npy_uint32 op_flags[NPY_MAXARGS], op_flags_inner[NPY_MAXARGS];
-    PyArray_Descr *op_request_dtypes[NPY_MAXARGS],
-                  *op_request_dtypes_inner[NPY_MAXARGS];
     int op_axes_data[NPY_MAXDIMS];
     int *nested_op_axes[NPY_MAXDIMS];
     int nested_naxes[NPY_MAXDIMS], iaxes, naxes;
     int negones[NPY_MAXDIMS];
     char used_axes[NPY_MAXDIMS];
     int buffersize = 0;
+    npy_intp alloc_size;
+    PyArrayObject **op = NULL;
+    npy_uint32 *op_flags, *op_flags_inner;
+    PyArray_Descr **op_request_dtypes,
+                  **op_request_dtypes_inner;
+    int **op_axes_nop;
 
     PyObject *ret = NULL;
 
@@ -977,8 +979,21 @@ NpyIter_NestedIters(PyObject *NPY_UNUSED(self),
         return NULL;
     }
 
+    alloc_size = nop *
+        (sizeof(*op) + sizeof(*op_flags) +
+         sizeof(*op_flags_inner) + sizeof(*op_request_dtypes) +
+         sizeof(*op_request_dtypes) + sizeof(*op_request_dtypes_inner) +
+         sizeof(*op_axes_nop));
+    op = npy_alloc_cache(alloc_size);
+    op_flags = (npy_uint32*)(op + nop);
+    op_flags_inner = (npy_uint32*)(op_flags + nop);
+    op_request_dtypes = (PyArray_Descr**)(op_flags_inner + nop);
+    op_request_dtypes_inner = (PyArray_Descr**)(op_request_dtypes + nop);
+    op_axes_nop = (int**)(op_request_dtypes_inner  + nop);
+
     /* op and op_flags */
     if (npyiter_convert_ops(op_in, op_flags_in, op, op_flags, nop) != 1) {
+        npy_free_cache(op, alloc_size);
         return NULL;
     }
 
@@ -1043,7 +1058,6 @@ NpyIter_NestedIters(PyObject *NPY_UNUSED(self),
 
     for (inest = 0; inest < nnest; ++inest) {
         NewNpyArrayIterObject *iter;
-        int *op_axes_nop[NPY_MAXARGS];
 
         /*
          * All the operands' op_axes are the same, except for
@@ -1182,6 +1196,7 @@ fail:
         Py_XDECREF(op_request_dtypes[iop]);
         Py_XDECREF(op_request_dtypes_inner[iop]);
     }
+    npy_free_cache(op, alloc_size);
     return NULL;
 }
 
