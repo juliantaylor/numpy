@@ -205,7 +205,11 @@ npyiter_buffered_reduce_iternext_iters@tag_nop@(NpyIter *iter)
     NpyIter_AxisData *axisdata;
     NpyIter_BufferData *bufferdata = NIT_BUFFERDATA(iter);
     char **ptrs;
-    char *prev_dataptrs[NPY_MAXARGS];
+    char *prev_dataptrs_[NPY_MAXARGS];
+    char **prev_dataptrs = prev_dataptrs_;
+    if (NPY_UNLIKELY(nop >= NPY_MAXARGS)) {
+        prev_dataptrs = malloc(sizeof(*prev_dataptrs) * nop);
+    }
 
     ptrs = NBF_PTRS(bufferdata);
 
@@ -221,6 +225,9 @@ npyiter_buffered_reduce_iternext_iters@tag_nop@(NpyIter *iter)
             strides = NBF_STRIDES(bufferdata);
             for (iop = 0; iop < nop; ++iop) {
                 ptrs[iop] += strides[iop];
+            }
+            if (prev_dataptrs != prev_dataptrs_) {
+                free(prev_dataptrs);
             }
             return 1;
         }
@@ -241,6 +248,9 @@ npyiter_buffered_reduce_iternext_iters@tag_nop@(NpyIter *iter)
             reduce_outerptrs[iop] = ptr;
         }
         NBF_BUFITEREND(bufferdata) = NIT_ITERINDEX(iter) + NBF_SIZE(bufferdata);
+        if (prev_dataptrs != prev_dataptrs_) {
+            free(prev_dataptrs);
+        }
         return 1;
     }
 
@@ -254,6 +264,9 @@ npyiter_buffered_reduce_iternext_iters@tag_nop@(NpyIter *iter)
     /* Check if we're past the end */
     if (NIT_ITERINDEX(iter) >= NIT_ITEREND(iter)) {
         NBF_SIZE(bufferdata) = 0;
+        if (prev_dataptrs != prev_dataptrs_) {
+            free(prev_dataptrs);
+        }
         return 0;
     }
     /* Increment to the next buffer */
@@ -264,6 +277,9 @@ npyiter_buffered_reduce_iternext_iters@tag_nop@(NpyIter *iter)
     /* Prepare the next buffers and set iterend/size */
     npyiter_copy_to_buffers(iter, prev_dataptrs);
 
+    if (prev_dataptrs != prev_dataptrs_) {
+        free(prev_dataptrs);
+    }
     return 1;
 }
 
