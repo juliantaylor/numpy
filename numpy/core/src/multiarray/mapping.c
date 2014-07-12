@@ -1575,7 +1575,7 @@ array_subscript(PyArrayObject *self, PyObject *op)
         goto finish;
     }
 
-    if (mapiter_get(mit) < 0) {
+    if (mapiter_get_npy_int64(mit) < 0) {
         goto finish;
     }
 
@@ -2069,7 +2069,7 @@ array_assign_subscript(PyArrayObject *self, PyObject *ind, PyObject *op)
      * not care about safe casting.
      */
 
-    if (mapiter_set(mit) < 0) {
+    if (mapiter_set_npy_int64(mit) < 0) {
         goto fail;
     }
 

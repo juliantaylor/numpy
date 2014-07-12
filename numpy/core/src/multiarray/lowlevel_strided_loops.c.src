@@ -1481,19 +1481,11 @@ mapiter_trivial_@name@_@type@(PyArrayObject *self, PyArrayObject *ind,
     return 0;
 }
 
-/**end repeat1**/
-/**end repeat**/
-
-/**begin repeat
- * #name = set, get#
- * #isget = 0, 1#
- */
-
 /*
  * General advanced indexing iteration.
  */
 NPY_NO_EXPORT int
-mapiter_@name@(PyArrayMapIterObject *mit)
+mapiter_@name@_@type@(PyArrayMapIterObject *mit)
 {
     npy_intp *counter, count;
     int i, is_aligned;
@@ -1545,7 +1537,7 @@ mapiter_@name@(PyArrayMapIterObject *mit)
 
         /************ Optimized inner loops without subspace *************/
 
-/**begin repeat1
+/**begin repeat2
  * #one_iter = 1, 0#
  * #numiter = 1, numiter#
  */
@@ -1563,7 +1555,7 @@ mapiter_@name@(PyArrayMapIterObject *mit)
             /* Optimization for aligned types that do not need the api */
             switch ((is_aligned && !needs_api) ? PyArray_ITEMSIZE(array) : 0) {
 
-/**begin repeat2
+/**begin repeat3
  * #elsize = 1, 2, 4, 8, 0#
  * #copytype = npy_uint8, npy_uint16, npy_uint32, npy_uint64, 0#
  */
@@ -1588,12 +1580,12 @@ mapiter_@name@(PyArrayMapIterObject *mit)
                     while (count--) {
                         char * self_ptr = baseoffset;
                         for (i=0; i < @numiter@; i++) {
-                            npy_intp indval = *((npy_intp*)outer_ptrs[i]);
+                            @type@ indval = *((@type@*)outer_ptrs[i]);
                             assert(npy_is_aligned(outer_ptrs[i],
-                                                  _ALIGN(npy_intp)));
+                                                  _ALIGN(@type@)));
 
 #if @isget@ && @one_iter@
-                            if (check_and_adjust_index(&indval, fancy_dims[i],
+                            if (check_and_adjust_index_@type@(&indval, fancy_dims[i],
                                                        iteraxis, _save) < 0 ) {
                                 return -1;
                             }
@@ -1632,11 +1624,11 @@ mapiter_@name@(PyArrayMapIterObject *mit)
 
                 break;
 
-/**end repeat2**/
+/**end repeat3**/
             }
             NPY_END_THREADS;
         }
-/**end repeat1**/
+/**end repeat2**/
     }
 
     /******************* Nested Iteration Situation *******************/
@@ -1682,7 +1674,7 @@ mapiter_@name@(PyArrayMapIterObject *mit)
             skip = 1;
         }
 
-/**begin repeat1
+/**begin repeat2
  * #one_iter = 1, 0#
  * #numiter = 1, numiter#
  */
@@ -1701,11 +1693,11 @@ mapiter_@name@(PyArrayMapIterObject *mit)
             do {
                 char * self_ptr = baseoffset;
                 for (i=0; i < @numiter@; i++) {
-                    npy_intp indval = *((npy_intp*)outer_ptrs[i]);
+                    @type@ indval = *((@type@*)outer_ptrs[i]);
 
 #if @isget@ && @one_iter@
-                    if (check_and_adjust_index(&indval, fancy_dims[i],
-                                               iteraxis, _save) < 0 ) {
+                    if (check_and_adjust_index_@type@(&indval, fancy_dims[i],
+                                                      iteraxis, _save) < 0 ) {
                         NPY_AUXDATA_FREE(transferdata);
                         return -1;
                     }
@@ -1771,11 +1763,12 @@ mapiter_@name@(PyArrayMapIterObject *mit)
             } while (mit->outer_next(mit->outer));
             NPY_END_THREADS;
         }
-/**end repeat1**/
+/**end repeat2**/
 
         NPY_AUXDATA_FREE(transferdata);
     }
     return 0;
 }
 
+/**end repeat1**/
 /**end repeat**/
