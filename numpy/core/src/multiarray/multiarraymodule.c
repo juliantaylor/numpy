@@ -2160,10 +2160,6 @@ einsum_sub_op_from_str(PyObject *args, PyObject **str_obj, char **subscripts,
                         "and at least one operand");
         return -1;
     }
-    else if (nop >= NPY_MAXARGS) {
-        PyErr_SetString(PyExc_ValueError, "too many operands");
-        return -1;
-    }
 
     /* Get the subscripts string */
     subscripts_str = PyTuple_GET_ITEM(args, 0);
@@ -2308,10 +2304,6 @@ einsum_sub_op_from_lists(PyObject *args,
                         "operand and a subscripts list to einsum");
         return -1;
     }
-    else if(nop >= NPY_MAXARGS) {
-        PyErr_SetString(PyExc_ValueError, "too many operands");
-        return -1;
-    }
 
     /* Set the operands to NULL */
     for (i = 0; i < nop; ++i) {
@@ -2391,7 +2383,7 @@ array_einsum(PyObject *NPY_UNUSED(dummy), PyObject *args, PyObject *kwds)
     PyObject *str_obj = NULL, *str_key_obj = NULL;
     PyObject *arg0;
     int i, nop;
-    PyArrayObject *op[NPY_MAXARGS];
+    PyArrayObject **op;
     NPY_ORDER order = NPY_KEEPORDER;
     NPY_CASTING casting = NPY_SAFE_CASTING;
     PyArrayObject *out = NULL;
@@ -2406,6 +2398,8 @@ array_einsum(PyObject *NPY_UNUSED(dummy), PyObject *args, PyObject *kwds)
         return NULL;
     }
     arg0 = PyTuple_GET_ITEM(args, 0);
+
+    op = npy_alloc_cache(sizeof(*op) * (PyTuple_GET_SIZE(args)));
 
     /* einsum('i,j', a, b), einsum('i,j->ij', a, b) */
     if (PyString_Check(arg0) || PyUnicode_Check(arg0)) {
@@ -2491,6 +2485,7 @@ finish:
     for (i = 0; i < nop; ++i) {
         Py_XDECREF(op[i]);
     }
+    npy_free_cache(op, sizeof(*op) * (PyTuple_GET_SIZE(args)));
     Py_XDECREF(dtype);
     Py_XDECREF(str_obj);
     Py_XDECREF(str_key_obj);
@@ -3318,7 +3313,7 @@ static PyObject *
 _vec_string_with_args(PyArrayObject* char_array, PyArray_Descr* type,
                       PyObject* method, PyObject* args)
 {
-    PyObject* broadcast_args[NPY_MAXARGS];
+    PyObject** broadcast_args;
     PyArrayMultiIterObject* in_iter = NULL;
     PyArrayObject* result = NULL;
     PyArrayIterObject* out_iter = NULL;
@@ -3326,11 +3321,11 @@ _vec_string_with_args(PyArrayObject* char_array, PyArray_Descr* type,
     Py_ssize_t i, n, nargs;
 
     nargs = PySequence_Size(args) + 1;
-    if (nargs == -1 || nargs > NPY_MAXARGS) {
-        PyErr_Format(PyExc_ValueError,
-                "len(args) must be < %d", NPY_MAXARGS - 1);
+
+    if (nargs <= 0) {
         goto err;
     }
+    broadcast_args = npy_alloc_cache(nargs * sizeof(*broadcast_args));
 
     broadcast_args[0] = (PyObject*)char_array;
     for (i = 1; i < nargs; i++) {
@@ -3397,6 +3392,7 @@ _vec_string_with_args(PyArrayObject* char_array, PyArray_Descr* type,
     Py_DECREF(in_iter);
     Py_DECREF(out_iter);
     Py_DECREF(args_tuple);
+    npy_free_cache(broadcast_args, nargs * sizeof(*broadcast_args));
 
     return (PyObject*)result;
 
@@ -3405,6 +3401,7 @@ _vec_string_with_args(PyArrayObject* char_array, PyArray_Descr* type,
     Py_XDECREF(out_iter);
     Py_XDECREF(args_tuple);
     Py_XDECREF(result);
+    npy_free_cache(broadcast_args, nargs * sizeof(*broadcast_args));
 
     return 0;
 }
