@@ -12,6 +12,7 @@
 #include "usertypes.h"
 
 #include "common.h"
+#include "templ_common.h"
 #include "buffer.h"
 
 /*

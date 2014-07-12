@@ -18,6 +18,7 @@
 #include <numpy/npy_cpu.h>
 #include <numpy/halffloat.h>
 
+#include "templ_common.h"
 #include "lowlevel_strided_loops.h"
 
 /* used for some alignment checks */
@@ -1361,6 +1362,12 @@ PyArray_TransferMaskedStridedToNDim(npy_intp ndim,
 /***************************************************************************/
 
 /**begin repeat
+ * #type = npy_int8, npy_int16, npy_int32, npy_int64,
+ *         npy_uint8, npy_uint16, npy_uint32, npy_uint64#
+ * #signed = 1*4, 0*4#
+ */
+
+/**begin repeat1
  * #name = set, get#
  * #isget = 0, 1#
  */
@@ -1371,8 +1378,8 @@ PyArray_TransferMaskedStridedToNDim(npy_intp ndim,
  * can be trivally iterated (single stride, aligned, no casting necessary).
  */
 NPY_NO_EXPORT int
-mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
-                       PyArrayObject *result)
+mapiter_trivial_@name@_@type@(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result)
 {
     char *base_ptr, *ind_ptr, *result_ptr;
     npy_intp self_stride, ind_stride, result_stride;
@@ -1399,8 +1406,8 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
 #if !@isget@
     /* Check the indices beforehand */
     while (itersize--) {
-        npy_intp indval = *((npy_intp*)ind_ptr);
-        if (check_and_adjust_index(&indval, fancy_dim, 1, _save) < 0 ) {
+        @type@ indval = *((@type@*)ind_ptr);
+        if (check_and_adjust_index_@type@(&indval, fancy_dim, 1, _save) < 0 ) {
             return -1;
         }
         ind_ptr += ind_stride;
@@ -1417,7 +1424,7 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
     /* Optimization for aligned types that do not need the api */
     switch ((is_aligned && !needs_api) ? PyArray_ITEMSIZE(self) : 0) {
 
-/**begin repeat1
+/**begin repeat2
  * #elsize = 1, 2, 4, 8, 0#
  * #copytype = npy_uint8, npy_uint16, npy_uint32, npy_uint64, 0#
  */
@@ -1429,14 +1436,14 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
 #endif
         while (itersize--) {
             char * self_ptr;
-            npy_intp indval = *((npy_intp*)ind_ptr);
-            assert(npy_is_aligned(ind_ptr, _ALIGN(npy_intp)));
+            @type@ indval = *((@type@*)ind_ptr);
+            assert(npy_is_aligned(ind_ptr, _ALIGN(@type@)));
 #if @isget@
-            if (check_and_adjust_index(&indval, fancy_dim, 1, _save) < 0 ) {
+            if (check_and_adjust_index_@type@(&indval, fancy_dim, 1, _save) < 0 ) {
                 return -1;
             }
 #else
-            if (indval < 0) {
+            if (@signed@ && indval < 0) {
                 indval += fancy_dim;
             }
 #endif
@@ -1466,7 +1473,7 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
         }
         break;
 
-/**end repeat1**/
+/**end repeat2**/
     }
 
     NPY_END_THREADS;
@@ -1474,6 +1481,13 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
     return 0;
 }
 
+/**end repeat1**/
+/**end repeat**/
+
+/**begin repeat
+ * #name = set, get#
+ * #isget = 0, 1#
+ */
 
 /*
  * General advanced indexing iteration.

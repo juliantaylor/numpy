@@ -12,6 +12,7 @@
 
 #include "npy_pycompat.h"
 
+#include "templ_common.h"
 #include "common.h"
 #include "iterators.h"
 #include "mapping.h"
@@ -1489,9 +1490,7 @@ array_subscript(PyArrayObject *self, PyObject *op)
 
         /* Check if the index is simple enough */
         if (PyArray_TRIVIALLY_ITERABLE(ind) &&
-                /* Check if the type is equivalent to INTP */
-                PyArray_ITEMSIZE(ind) == sizeof(npy_intp) &&
-                PyArray_DESCR(ind)->kind == 'i' &&
+                (PyArray_DESCR(ind)->kind == 'u' || PyArray_DESCR(ind)->kind == 'i') &&
                 PyArray_ISALIGNED(ind) &&
                 PyDataType_ISNOTSWAPPED(PyArray_DESCR(ind))) {
 
@@ -1509,6 +1508,35 @@ array_subscript(PyArrayObject *self, PyObject *op)
                 goto finish;
             }
 
+            int (*mapiter_trivial_get)(PyArrayObject *, PyArrayObject *,
+                                      PyArrayObject *);
+
+            switch (PyArray_ITEMSIZE(ind)) {
+                case 8:
+                    if (PyArray_DESCR(ind)->kind == 'u')
+                        mapiter_trivial_get = mapiter_trivial_get_npy_uint64;
+                    else
+                        mapiter_trivial_get = mapiter_trivial_get_npy_int64;
+                    break;
+                case 4:
+                    if (PyArray_DESCR(ind)->kind == 'u')
+                        mapiter_trivial_get = mapiter_trivial_get_npy_uint32;
+                    else
+                        mapiter_trivial_get = mapiter_trivial_get_npy_int32;
+                    break;
+                case 2:
+                    if (PyArray_DESCR(ind)->kind == 'u')
+                        mapiter_trivial_get = mapiter_trivial_get_npy_uint16;
+                    else
+                        mapiter_trivial_get = mapiter_trivial_get_npy_int16;
+                    break;
+                case 1:
+                    if (PyArray_DESCR(ind)->kind == 'u')
+                        mapiter_trivial_get = mapiter_trivial_get_npy_uint8;
+                    else
+                        mapiter_trivial_get = mapiter_trivial_get_npy_int8;
+                    break;
+            }
             if (mapiter_trivial_get(self, ind, (PyArrayObject *)result) < 0) {
                 Py_DECREF(result);
                 result = NULL;
@@ -1934,12 +1962,40 @@ array_assign_subscript(PyArrayObject *self, PyObject *ind, PyObject *op)
                  (PyArray_NDIM(tmp_arr) == 0 &&
                         PyArray_TRIVIALLY_ITERABLE(tmp_arr))) &&
                 /* Check if the type is equivalent to INTP */
-                PyArray_ITEMSIZE(ind) == sizeof(npy_intp) &&
-                PyArray_DESCR(ind)->kind == 'i' &&
+                (PyArray_DESCR(ind)->kind == 'u' || PyArray_DESCR(ind)->kind == 'i') &&
                 PyArray_ISALIGNED(ind) &&
                 PyDataType_ISNOTSWAPPED(PyArray_DESCR(ind))) {
 
             /* trivial_set checks the index for us */
+            int (*mapiter_trivial_set)(PyArrayObject *, PyArrayObject *,
+                                      PyArrayObject *);
+
+            switch (PyArray_ITEMSIZE(ind)) {
+                case 8:
+                    if (PyArray_DESCR(ind)->kind == 'u')
+                        mapiter_trivial_set = mapiter_trivial_set_npy_uint64;
+                    else
+                        mapiter_trivial_set = mapiter_trivial_set_npy_int64;
+                    break;
+                case 4:
+                    if (PyArray_DESCR(ind)->kind == 'u')
+                        mapiter_trivial_set = mapiter_trivial_set_npy_uint32;
+                    else
+                        mapiter_trivial_set = mapiter_trivial_set_npy_int32;
+                    break;
+                case 2:
+                    if (PyArray_DESCR(ind)->kind == 'u')
+                        mapiter_trivial_set = mapiter_trivial_set_npy_uint16;
+                    else
+                        mapiter_trivial_set = mapiter_trivial_set_npy_int16;
+                    break;
+                case 1:
+                    if (PyArray_DESCR(ind)->kind == 'u')
+                        mapiter_trivial_set = mapiter_trivial_set_npy_uint8;
+                    else
+                        mapiter_trivial_set = mapiter_trivial_set_npy_int8;
+                    break;
+            }
             if (mapiter_trivial_set(self, ind, tmp_arr) < 0) {
                 goto fail;
             }

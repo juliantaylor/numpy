@@ -327,12 +327,55 @@ PyArray_TransferMaskedStridedToNDim(npy_intp ndim,
                 NpyAuxData *data);
 
 NPY_NO_EXPORT int
-mapiter_trivial_get(PyArrayObject *self, PyArrayObject *ind,
-                       PyArrayObject *result);
+mapiter_trivial_get_npy_int64(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_get_npy_uint64(PyArrayObject *self, PyArrayObject *ind,
+                               PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_get_npy_int32(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_get_npy_uint32(PyArrayObject *self, PyArrayObject *ind,
+                               PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_get_npy_int16(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_get_npy_uint16(PyArrayObject *self, PyArrayObject *ind,
+                               PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_get_npy_int8(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_get_npy_uint8(PyArrayObject *self, PyArrayObject *ind,
+                               PyArrayObject *result);
+
 
 NPY_NO_EXPORT int
-mapiter_trivial_set(PyArrayObject *self, PyArrayObject *ind,
-                       PyArrayObject *result);
+mapiter_trivial_set_npy_int64(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_set_npy_uint64(PyArrayObject *self, PyArrayObject *ind,
+                               PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_set_npy_int32(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_set_npy_uint32(PyArrayObject *self, PyArrayObject *ind,
+                               PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_set_npy_int16(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_set_npy_uint16(PyArrayObject *self, PyArrayObject *ind,
+                               PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_set_npy_int8(PyArrayObject *self, PyArrayObject *ind,
+                             PyArrayObject *result);
+NPY_NO_EXPORT int
+mapiter_trivial_set_npy_uint8(PyArrayObject *self, PyArrayObject *ind,
+                              PyArrayObject *result);
 
 NPY_NO_EXPORT int
 mapiter_get(PyArrayMapIterObject *mit);

@@ -11,6 +11,7 @@
 #include "npy_config.h"
 #include "npy_pycompat.h"
 #include "ufunc_override.h"
+#include "templ_common.h"
 #include "common.h"
 #include "ctors.h"
 #include "calculation.h"

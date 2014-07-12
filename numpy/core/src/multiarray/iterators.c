@@ -15,6 +15,7 @@
 #include "iterators.h"
 #include "ctors.h"
 #include "common.h"
+#include "templ_common.h"
 
 #define NEWAXIS_INDEX -1
 #define ELLIPSIS_INDEX -2

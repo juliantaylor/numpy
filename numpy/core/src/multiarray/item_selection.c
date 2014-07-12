@@ -14,6 +14,7 @@
 
 #include "npy_pycompat.h"
 
+#include "templ_common.h"
 #include "common.h"
 #include "arrayobject.h"
 #include "ctors.h"
