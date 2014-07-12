@@ -23,6 +23,7 @@
 
 #include "convert.h"
 #include "common.h"
+#include "alloc.h"
 
 #ifdef NPY_HAVE_SSE_INTRINSICS
 #define EINSUM_USE_SSE1 1
@@ -2603,32 +2604,48 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
 {
     int iop, label, min_label = 127, max_label = 0, num_labels;
     char label_counts[128];
-    char op_labels[NPY_MAXARGS][NPY_MAXDIMS];
     char output_labels[NPY_MAXDIMS], *iter_labels;
     int idim, ndim_output, ndim_broadcast, ndim_iter;
 
-    PyArrayObject *op[NPY_MAXARGS], *ret = NULL;
-    PyArray_Descr *op_dtypes_array[NPY_MAXARGS], **op_dtypes;
-
-    int op_axes_arrays[NPY_MAXARGS][NPY_MAXDIMS];
-    int *op_axes[NPY_MAXARGS];
-    npy_uint32 op_flags[NPY_MAXARGS];
-
     NpyIter *iter;
     sum_of_products_fn sop;
-    npy_intp fixed_strides[NPY_MAXARGS];
+    PyArrayObject *ret = NULL;
+    PyArray_Descr **op_dtypes;
 
-    /* nop+1 (+1 is for the output) must fit in NPY_MAXARGS */
-    if (nop >= NPY_MAXARGS) {
-        PyErr_SetString(PyExc_ValueError,
-                    "too many operands provided to einstein sum function");
-        return NULL;
-    }
-    else if (nop < 1) {
+    /* [nop] arrays */
+    PyArrayObject **op;
+    PyArray_Descr **op_dtypes_array;
+    int *op_axes_arrays; // [nop][NPY_MAXDIMS]
+    char *op_labels; //[nop][NPY_MAXDIMS]
+    npy_intp *fixed_strides;
+    int **op_axes;
+    npy_uint32 *op_flags;
+
+    npy_intp alloc_size;
+
+
+    if (nop < 1) {
         PyErr_SetString(PyExc_ValueError,
                     "not enough operands provided to einstein sum function");
         return NULL;
     }
+
+    /* +1 is for the output */
+    alloc_size = (nop + 1) *
+        (sizeof(*op) + sizeof(*op_dtypes_array) +
+         sizeof(*op_axes_arrays) * NPY_MAXDIMS +
+         sizeof(*op_labels) * NPY_MAXDIMS +
+         sizeof(*fixed_strides) +
+         sizeof(*op_axes) +
+         sizeof(*op_flags));
+
+    op = npy_alloc_cache(alloc_size);
+    op_dtypes_array = (PyArray_Descr**)(op + nop + 1);
+    op_axes_arrays = (int*)(op_dtypes_array + nop + 1);
+    op_labels = (char*)(op_axes_arrays + (nop + 1) * NPY_MAXDIMS);
+    fixed_strides = (npy_intp*)(op_labels + (nop + 1) * NPY_MAXDIMS);
+    op_axes = (int**)(fixed_strides + nop + 1);
+    op_flags = (npy_uint32*)(op_axes + nop + 1);
 
     /* Parse the subscripts string into label_counts and op_labels */
     memset(label_counts, 0, sizeof(label_counts));
@@ -2640,19 +2657,22 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
             PyErr_SetString(PyExc_ValueError,
                         "more operands provided to einstein sum function "
                         "than specified in the subscripts string");
+            npy_free_cache(op, alloc_size);
             return NULL;
         }
         else if(iop < nop-1 && subscripts[length] != ',') {
             PyErr_SetString(PyExc_ValueError,
                         "fewer operands provided to einstein sum function "
                         "than specified in the subscripts string");
+            npy_free_cache(op, alloc_size);
             return NULL;
         }
 
         if (!parse_operand_subscripts(subscripts, length,
                         PyArray_NDIM(op_in[iop]),
-                        iop, op_labels[iop], label_counts,
+                        iop, &op_labels[iop * NPY_MAXDIMS], label_counts,
                         &min_label, &max_label, &num_labels)) {
+            npy_free_cache(op, alloc_size);
             return NULL;
         }
 
@@ -2671,7 +2691,7 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
     for (iop = 0; iop < nop; ++iop) {
         npy_intp count_zeros = 0;
         int ndim;
-        char *labels = op_labels[iop];
+        char *labels = &op_labels[iop * NPY_MAXDIMS];
 
         ndim = PyArray_NDIM(op_in[iop]);
         for (idim = 0; idim < ndim; ++idim) {
@@ -2706,6 +2726,7 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
                     PyErr_SetString(PyExc_ValueError,
                                 "einstein sum subscript string has too many "
                                 "distinct labels");
+                    npy_free_cache(op, alloc_size);
                     return NULL;
                 }
             }
@@ -2720,6 +2741,7 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
             PyErr_SetString(PyExc_ValueError,
                         "einstein sum subscript string does not "
                         "contain proper '->' output specified");
+            npy_free_cache(op, alloc_size);
             return NULL;
         }
         subscripts += 2;
@@ -2730,6 +2752,7 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
                                         output_labels);
     }
     if (ndim_output < 0) {
+        npy_free_cache(op, alloc_size);
         return NULL;
     }
 
@@ -2738,6 +2761,7 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
                 "out parameter does not have the correct number of "
                 "dimensions, has %d but should have %d",
                 (int)PyArray_NDIM(out), (int)ndim_output);
+        npy_free_cache(op, alloc_size);
         return NULL;
     }
 
@@ -2751,7 +2775,7 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
      * diagonal where specified.
      */
     for (iop = 0; iop < nop; ++iop) {
-        char *labels = op_labels[iop];
+        char *labels = &op_labels[iop * NPY_MAXDIMS];
         int combine, ndim;
 
         ndim = PyArray_NDIM(op_in[iop]);
@@ -2767,10 +2791,12 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
             if (!get_single_op_view(op_in[iop], iop, labels,
                                     ndim_output, output_labels,
                                     &ret)) {
+                npy_free_cache(op, alloc_size);
                 return NULL;
             }
 
             if (ret != NULL) {
+                npy_free_cache(op, alloc_size);
                 return ret;
             }
         }
@@ -2826,10 +2852,11 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
 
     /* Set up the op_axes for the iterator */
     for (iop = 0; iop < nop; ++iop) {
-        op_axes[iop] = op_axes_arrays[iop];
+        op_axes[iop] = &op_axes_arrays[iop * NPY_MAXDIMS];
 
-        if (!prepare_op_axes(PyArray_NDIM(op[iop]), iop, op_labels[iop],
-                    op_axes[iop], ndim_iter, iter_labels)) {
+        if (!prepare_op_axes(PyArray_NDIM(op[iop]), iop,
+                    &op_labels[iop * NPY_MAXDIMS], op_axes[iop], ndim_iter,
+                    iter_labels)) {
             goto fail;
         }
     }
@@ -2846,7 +2873,7 @@ PyArray_EinsteinSum(char *subscripts, npy_intp nop,
     }
 
     /* Set the op_axes for the output */
-    op_axes[nop] = op_axes_arrays[nop];
+    op_axes[nop] = &op_axes_arrays[nop * NPY_MAXDIMS];
     for (idim = 0; idim < ndim_output; ++idim) {
         op_axes[nop][idim] = idim;
     }
@@ -3001,6 +3028,7 @@ finish:
     for (iop = 0; iop < nop; ++iop) {
         Py_DECREF(op[iop]);
     }
+    npy_free_cache(op, alloc_size);
 
     return ret;
 
@@ -3008,6 +3036,7 @@ fail:
     for (iop = 0; iop < nop; ++iop) {
         Py_XDECREF(op[iop]);
     }
+    npy_free_cache(op, alloc_size);
 
     return NULL;
 }
