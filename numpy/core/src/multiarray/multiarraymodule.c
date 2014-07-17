@@ -1839,7 +1839,7 @@ array_scalar(PyObject *NPY_UNUSED(ignored), PyObject *args, PyObject *kwds)
 
     static char *kwlist[] = {"dtype","obj", NULL};
     PyArray_Descr *typecode;
-    PyObject *obj = NULL;
+    PyObject *obj = NULL, *tmpobj = NULL;
     int alloc = 0;
     void *dptr;
     PyObject *ret;
@@ -1871,25 +1871,38 @@ array_scalar(PyObject *NPY_UNUSED(ignored), PyObject *args, PyObject *kwds)
             alloc = 1;
         }
         else {
-            if (!PyString_Check(obj)) {
-                PyErr_SetString(PyExc_TypeError,
-                        "initializing object must be a string");
-                return NULL;
+            if (PyString_Check(obj)) {
+                if (PyString_GET_SIZE(obj) < typecode->elsize) {
+                    PyErr_SetString(PyExc_ValueError,
+                            "initialization string is too small");
+                    return NULL;
+                }
+                dptr = PyString_AS_STRING(obj);
             }
-            if (PyString_GET_SIZE(obj) < typecode->elsize) {
-                PyErr_SetString(PyExc_ValueError,
-                        "initialization string is too small");
-                return NULL;
+            else if (PyUnicode_Check(obj)) {
+                tmpobj = PyUnicode_AsASCIIString(obj);
+                if (tmpobj == NULL) {
+                    PyErr_SetString(PyExc_ValueError,
+                        "initialization string must be decodeable into ascii");
+                    return NULL;
+                }
+                if (PyBytes_GET_SIZE(tmpobj) < typecode->elsize) {
+                    PyErr_SetString(PyExc_ValueError,
+                            "initialization string is too small");
+                    Py_DECREF(tmpobj);
+                    return NULL;
+                }
+                dptr = PyString_AS_STRING(tmpobj);
             }
-            dptr = PyString_AS_STRING(obj);
         }
     }
     ret = PyArray_Scalar(dptr, typecode, NULL);
 
     /* free dptr which contains zeros */
-    if (alloc) {
+    if (alloc == 1) {
         PyArray_free(dptr);
     }
+    Py_XDECREF(tmpobj);
     return ret;
 }
 
