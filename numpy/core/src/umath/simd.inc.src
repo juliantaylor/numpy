@@ -741,6 +741,51 @@ sse2_@kind@_@TYPE@(@type@ * ip, @type@ * op, const npy_intp n)
 
 /*
  *****************************************************************************
+ **                           COMPLEX LOOPS
+ *****************************************************************************
+ */
+
+/**begin repeat
+ *  #type = npy_cfloat, npy_cdouble#
+ *  #btype = npy_float, npy_double#
+ *  #TYPE = CFLOAT, CDOUBLE#
+ *  #vtype = __m128, __m128d#
+ *  #vpre = _mm, _mm#
+ *  #vsuf = ps, pd#
+ *  #double = 0, 1#
+ */
+
+static void
+sse2_conjugate_@TYPE@(@type@ * op_, @type@ * ip_, const npy_intp n)
+{
+    /*
+     * get 0x7FFFFFFF mask (everything but signbit set)
+     * float & ~mask will remove the sign, float ^ mask flips the sign
+     * this is equivalent to how the compiler implements fabs on amd64
+     */
+#if @double@
+    const @vtype@ mask = @vpre@_set_pd(-0., 0);
+#else
+    const @vtype@ mask = @vpre@_set_ps(-0.f, 0.f, -0.f, 0.f);
+#endif
+    npy_intp i;
+    @btype@ * ip = (@btype@ *)ip_;
+    @btype@ * op = (@btype@ *)op_;
+
+    for (i = 0; i < 2 * n;  i += (16 / sizeof(@btype@))) {
+        @vtype@ a = @vpre@_load_@vsuf@(&ip[i]);
+        @vpre@_store_@vsuf@(&op[i], @vpre@_xor_@vsuf@(mask, a));
+    }
+    if (!@double@ && (n & 1) == 1) {
+        op[i] = ip[i];
+        op[i + 1] = -ip[i + 1];
+    }
+}
+
+/**end repeat**/
+
+/*
+ *****************************************************************************
  **                           BOOL LOOPS
  *****************************************************************************
  */

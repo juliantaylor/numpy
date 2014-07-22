@@ -2418,6 +2418,14 @@ NPY_NO_EXPORT void
 
 NPY_NO_EXPORT void
 @TYPE@_conjugate(char **args, npy_intp *dimensions, npy_intp *steps, void *NPY_UNUSED(func)) {
+    if (strcmp("@TYPE@", "CDOUBLE") == 0 && steps[1] == 16 && steps[0] == 16) {
+        sse2_conjugate_CDOUBLE(args[1], args[0], dimensions[0]);
+        return;
+    }
+    if (strcmp("@TYPE@", "CFLOAT") == 0 && steps[1] == 8 && steps[0] == 8) {
+        sse2_conjugate_CFLOAT(args[1], args[0], dimensions[0]);
+        return;
+    }
     UNARY_LOOP {
         const @ftype@ in1r = ((@ftype@ *)ip1)[0];
         const @ftype@ in1i = ((@ftype@ *)ip1)[1];
