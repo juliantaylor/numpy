@@ -2647,9 +2647,17 @@ reduce_type_resolver(PyUFuncObject *ufunc, PyArrayObject *arr,
      * resolution.
      */
     if (odtype != NULL) {
-        type_tup = PyTuple_Pack(3, odtype, odtype, Py_None);
-        if (type_tup == NULL) {
-            return -1;
+        /* bool and float don't need casting, skip tuple for speed */
+        if (!(PyTypeNum_ISBOOL(odtype->type_num) &&
+              PyArray_TYPE(arr) == odtype->type_num) &&
+            !(PyTypeNum_ISFLOAT(odtype->type_num) &&
+              PyArray_TYPE(arr) == odtype->type_num &&
+              PyArray_DESCR(arr)->byteorder == odtype->byteorder &&
+              odtype->byteorder == NPY_NATIVE)) {
+            type_tup = PyTuple_Pack(3, odtype, odtype, Py_None);
+            if (type_tup == NULL) {
+                return -1;
+            }
         }
     }
 
@@ -2657,7 +2665,7 @@ reduce_type_resolver(PyUFuncObject *ufunc, PyArrayObject *arr,
     retcode = ufunc->type_resolver(
                         ufunc, NPY_UNSAFE_CASTING,
                         op, type_tup, dtypes);
-    Py_DECREF(type_tup);
+    Py_XDECREF(type_tup);
     if (retcode == -1) {
         return -1;
     }
