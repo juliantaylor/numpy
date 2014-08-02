@@ -1575,7 +1575,7 @@ array_subscript(PyArrayObject *self, PyObject *op)
         goto finish;
     }
 
-    if (mapiter_get_npy_int64(mit) < 0) {
+    if (mapiter_get_npy_int32(mit) < 0) {
         goto finish;
     }
 
@@ -2069,7 +2069,7 @@ array_assign_subscript(PyArrayObject *self, PyObject *ind, PyObject *op)
      * not care about safe casting.
      */
 
-    if (mapiter_set_npy_int64(mit) < 0) {
+    if (mapiter_set_npy_int32(mit) < 0) {
         goto fail;
     }
 
@@ -2229,7 +2229,7 @@ PyArray_MapIterReset(PyArrayMapIterObject *mit)
     baseptrs[0] = mit->baseoffset;
 
     for (i = 0; i < mit->numiter; i++) {
-        indval = *((npy_intp*)mit->outer_ptrs[i]);
+        indval = *((npy_int32*)mit->outer_ptrs[i]);
         if (indval < 0) {
             indval += mit->fancy_dims[i];
         }
@@ -2281,7 +2281,7 @@ PyArray_MapIterNext(PyArrayMapIterObject *mit)
             baseptr = mit->baseoffset;
 
             for (i = 0; i < mit->numiter; i++) {
-                indval = *((npy_intp*)mit->outer_ptrs[i]);
+                indval = *((npy_int32*)mit->outer_ptrs[i]);
                 if (indval < 0) {
                     indval += mit->fancy_dims[i];
                 }
@@ -2300,7 +2300,7 @@ PyArray_MapIterNext(PyArrayMapIterObject *mit)
             for (i = 0; i < mit->numiter; i++) {
                 mit->outer_ptrs[i] += mit->outer_strides[i];
 
-                indval = *((npy_intp*)mit->outer_ptrs[i]);
+                indval = *((npy_int32*)mit->outer_ptrs[i]);
                 if (indval < 0) {
                     indval += mit->fancy_dims[i];
                 }
@@ -2318,7 +2318,7 @@ PyArray_MapIterNext(PyArrayMapIterObject *mit)
             baseptr = mit->baseoffset;
 
             for (i = 0; i < mit->numiter; i++) {
-                indval = *((npy_intp*)mit->outer_ptrs[i]);
+                indval = *((npy_int32*)mit->outer_ptrs[i]);
                 if (indval < 0) {
                     indval += mit->fancy_dims[i];
                 }
@@ -2688,7 +2688,10 @@ PyArray_MapIterNew(npy_index_info *indices , int index_num, int index_type,
     for (i=0; i < index_num; i++) {
         if (indices[i].type & HAS_FANCY) {
             index_arrays[mit->numiter] = (PyArrayObject *)indices[i].object;
-            dtypes[mit->numiter] = PyArray_DescrFromType(NPY_INTP);
+            //char kind = PyArray_DESCR(index_arrays[mit->numiter])->kind;
+            //assert(kind == 'u' && kind == 'i');
+            dtypes[mit->numiter] = PyArray_DESCR(index_arrays[mit->numiter]);
+            Py_INCREF(dtypes[mit->numiter]);
 
             op_flags[mit->numiter] = (NPY_ITER_NBO |
                                       NPY_ITER_ALIGNED |
