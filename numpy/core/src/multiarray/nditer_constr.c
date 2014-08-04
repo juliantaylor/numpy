@@ -420,10 +420,8 @@ NpyIter_AdvancedNew(int nop, PyArrayObject **op_in, npy_uint32 flags,
          * get the internal pointers again.
          */
         itflags = NIT_ITFLAGS(iter);
-        ndim = NIT_NDIM(iter);
         op = NIT_OPERANDS(iter);
         op_dtype = NIT_DTYPES(iter);
-        op_itflags = NIT_OPITFLAGS(iter);
         op_dataptr = NIT_RESETDATAPTR(iter);
     }
 
@@ -1688,7 +1686,6 @@ npyiter_fill_axisdata(NpyIter *iter, npy_uint32 flags, npyiter_opitflags *op_itf
 broadcast_error: {
         PyObject *errmsg, *tmp;
         npy_intp remdims[NPY_MAXDIMS];
-        char *tmpstr;
 
         if (op_axes == NULL) {
             errmsg = PyUString_FromString("operands could not be broadcast "
@@ -1744,7 +1741,7 @@ broadcast_error: {
                 if (op[iop] != NULL) {
                     int *axes = op_axes[iop];
 
-                    tmpstr = (axes == NULL) ? " " : "->";
+                    char * tmpstr = (axes == NULL) ? " " : "->";
                     tmp = convert_shape_to_string(PyArray_NDIM(op[iop]),
                                                     PyArray_DIMS(op[iop]),
                                                     tmpstr);
@@ -2082,7 +2079,7 @@ npyiter_apply_forced_iteration_order(NpyIter *iter, NPY_ORDER order)
 {
     /*npy_uint32 itflags = NIT_ITFLAGS(iter);*/
     int ndim = NIT_NDIM(iter);
-    int iop, nop = NIT_NOP(iter);
+    int nop = NIT_NOP(iter);
 
     switch (order) {
     case NPY_CORDER:
@@ -2100,7 +2097,7 @@ npyiter_apply_forced_iteration_order(NpyIter *iter, NPY_ORDER order)
         /* Only need to actually do something if there is more than 1 dim */
         if (ndim > 1) {
             PyArrayObject **op = NIT_OPERANDS(iter);
-            int forder = 1;
+            int iop, forder = 1;
 
             /* Check that all the array inputs are fortran order */
             for (iop = 0; iop < nop; ++iop, ++op) {
@@ -2253,7 +2250,7 @@ static void
 npyiter_find_best_axis_ordering(NpyIter *iter)
 {
     npy_uint32 itflags = NIT_ITFLAGS(iter);
-    int idim, ndim = NIT_NDIM(iter);
+    int ndim = NIT_NDIM(iter);
     int iop, nop = NIT_NOP(iter);
 
     npy_intp ax_i0, ax_i1, ax_ipos;
@@ -2340,6 +2337,7 @@ npyiter_find_best_axis_ordering(NpyIter *iter)
     if (permuted == 1) {
         npy_intp i, size = sizeof_axisdata/NPY_SIZEOF_INTP;
         NpyIter_AxisData *ad_i;
+        int idim;
 
         /* Use the index as a flag, set each to 1 */
         ad_i = axisdata;
@@ -2354,9 +2352,9 @@ npyiter_find_best_axis_ordering(NpyIter *iter)
             if (NAD_INDEX(ad_i) == 1) {
                 npy_int8 pidim = perm[idim];
                 npy_intp tmp;
-                NpyIter_AxisData *ad_p, *ad_q;
 
                 if (pidim != idim) {
+                    NpyIter_AxisData *ad_p, *ad_q;
                     /* Follow the cycle, copying the data */
                     for (i = 0; i < size; ++i) {
                         pidim = perm[idim];

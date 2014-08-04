@@ -239,13 +239,12 @@ static int PyUFunc_NUM_NODEFAULTS = 0;
 static PyObject *
 get_global_ext_obj(void)
 {
-    PyObject *thedict;
     PyObject *ref = NULL;
 
 #if USE_USE_DEFAULTS==1
     if (PyUFunc_NUM_NODEFAULTS != 0) {
 #endif
-        thedict = PyThreadState_GetDict();
+        PyObject *thedict = PyThreadState_GetDict();
         if (thedict == NULL) {
             thedict = PyEval_GetBuiltins();
         }
@@ -433,7 +432,6 @@ static int
 _extract_pyvals(PyObject *ref, const char *name, int *bufsize,
                 int *errmask, PyObject **errobj)
 {
-    PyObject *retval;
 
     /* default errobj case, skips dictionary lookup */
     if (ref == NULL) {
@@ -486,8 +484,8 @@ _extract_pyvals(PyObject *ref, const char *name, int *bufsize,
     }
 
     if (errobj != NULL) {
+        PyObject *retval = PyList_GET_ITEM(ref, 2);
         *errobj = NULL;
-        retval = PyList_GET_ITEM(ref, 2);
         if (retval != Py_None && !PyCallable_Check(retval)) {
             PyObject *temp;
             temp = PyObject_GetAttrString(retval, "write");
@@ -1265,12 +1263,6 @@ iterator_loop(PyUFuncObject *ufunc,
     npy_intp nop = nin + nout;
     npy_uint32 op_flags[NPY_MAXARGS];
     NpyIter *iter;
-    char *baseptrs[NPY_MAXARGS];
-
-    NpyIter_IterNextFunc *iternext;
-    char **dataptr;
-    npy_intp *stride;
-    npy_intp *count_ptr;
 
     PyArrayObject **op_it;
     npy_uint32 iter_flags;
@@ -1340,6 +1332,11 @@ iterator_loop(PyUFuncObject *ufunc,
 
     /* Only do the loop if the iteration size is non-zero */
     if (NpyIter_GetIterSize(iter) != 0) {
+        char *baseptrs[NPY_MAXARGS];
+        NpyIter_IterNextFunc *iternext;
+        char **dataptr;
+        npy_intp *stride;
+        npy_intp *count_ptr;
 
         /* Reset the iterator with the base pointers from the wrapped outputs */
         for (i = 0; i < nin; ++i) {
@@ -1560,11 +1557,6 @@ execute_fancy_ufunc_loop(PyUFuncObject *ufunc,
     int needs_api;
     npy_intp default_op_in_flags = 0, default_op_out_flags = 0;
 
-    NpyIter_IterNextFunc *iternext;
-    char **dataptr;
-    npy_intp *strides;
-    npy_intp *countptr;
-
     PyArrayObject **op_it;
     npy_uint32 iter_flags;
 
@@ -1656,6 +1648,11 @@ execute_fancy_ufunc_loop(PyUFuncObject *ufunc,
         NpyAuxData *innerloopdata;
         npy_intp fixed_strides[2*NPY_MAXARGS];
         PyArray_Descr **iter_dtypes;
+        NpyIter_IterNextFunc *iternext;
+        char **dataptr;
+        npy_intp *strides;
+        npy_intp *countptr;
+
         NPY_BEGIN_THREADS_DEF;
 
         /* Validate that the prepare_ufunc_output didn't mess with pointers */
@@ -1720,7 +1717,6 @@ static PyObject *
 make_arr_prep_args(npy_intp nin, PyObject *args, PyObject *kwds)
 {
     PyObject *out = kwds ? PyDict_GetItem(kwds, npy_um_str_out) : NULL;
-    PyObject *arr_prep_args;
 
     if (out == NULL) {
         Py_INCREF(args);
@@ -1728,6 +1724,7 @@ make_arr_prep_args(npy_intp nin, PyObject *args, PyObject *kwds)
     }
     else {
         npy_intp i, nargs = PyTuple_GET_SIZE(args), n;
+        PyObject *arr_prep_args;
         n = nargs;
         if (n < nin + 1) {
             n = nin + 1;
@@ -2637,7 +2634,7 @@ static int
 reduce_type_resolver(PyUFuncObject *ufunc, PyArrayObject *arr,
                         PyArray_Descr *odtype, PyArray_Descr **out_dtype)
 {
-    int i, retcode;
+    int retcode;
     PyArrayObject *op[3] = {arr, arr, NULL};
     PyArray_Descr *dtypes[3] = {NULL, NULL, NULL};
     const char *ufunc_name = ufunc->name ? ufunc->name : "(unknown)";
@@ -2678,6 +2675,7 @@ reduce_type_resolver(PyUFuncObject *ufunc, PyArrayObject *arr,
      * reduction occurs.
      */
     if (!PyArray_EquivTypes(dtypes[0], dtypes[1])) {
+        int i;
         for (i = 0; i < 3; ++i) {
             Py_DECREF(dtypes[i]);
         }
@@ -3100,7 +3098,7 @@ PyUFunc_Accumulate(PyUFuncObject *ufunc, PyArrayObject *arr, PyArrayObject *out,
 
         /* Execute the loop with just the outer iterator */
         count_m1 = PyArray_DIM(op[1], axis)-1;
-        stride0 = 0, stride1 = PyArray_STRIDE(op[1], axis);
+        stride1 = PyArray_STRIDE(op[1], axis);
 
         NPY_UF_DBG_PRINT("UFunc: Reduce loop with just outer iterator\n");
 
@@ -3625,16 +3623,12 @@ PyUFunc_GenericReduction(PyUFuncObject *ufunc, PyObject *args,
     int axes[NPY_MAXDIMS];
     PyObject *axes_in = NULL;
     PyArrayObject *mp, *ret = NULL;
-    PyObject *op, *res = NULL;
+    PyObject *op;
     PyObject *obj_ind, *context;
     PyArrayObject *indices = NULL;
     PyArray_Descr *otype = NULL;
     PyArrayObject *out = NULL;
     int keepdims = 0;
-    static char *kwlist1[] = {"array", "axis", "dtype",
-                                "out", "keepdims", NULL};
-    static char *kwlist2[] = {"array", "indices", "axis",
-                                "dtype", "out", NULL};
     static char *_reduce_type[] = {"reduce", "accumulate", "reduceat", NULL};
 
     if (ufunc == NULL) {
@@ -3661,8 +3655,9 @@ PyUFunc_GenericReduction(PyUFuncObject *ufunc, PyObject *args,
     }
 
     if (operation == UFUNC_REDUCEAT) {
-        PyArray_Descr *indtype;
-        indtype = PyArray_DescrFromType(NPY_INTP);
+        PyArray_Descr *indtype = PyArray_DescrFromType(NPY_INTP);
+        static char *kwlist2[] = {"array", "indices", "axis",
+                                  "dtype", "out", NULL};
         if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO|OO&O&", kwlist2,
                                         &op,
                                         &obj_ind,
@@ -3679,18 +3674,10 @@ PyUFunc_GenericReduction(PyUFuncObject *ufunc, PyObject *args,
             return NULL;
         }
     }
-    else if (operation == UFUNC_ACCUMULATE) {
-        if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OO&O&i", kwlist1,
-                                        &op,
-                                        &axes_in,
-                                        PyArray_DescrConverter2, &otype,
-                                        PyArray_OutputConverter, &out,
-                                        &keepdims)) {
-            Py_XDECREF(otype);
-            return NULL;
-        }
-    }
     else {
+        /* reduceat and accumulate */
+        static char *kwlist1[] = {"array", "axis", "dtype",
+                                  "out", "keepdims", NULL};
         if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OO&O&i", kwlist1,
                                         &op,
                                         &axes_in,
@@ -3891,7 +3878,7 @@ PyUFunc_GenericReduction(PyUFuncObject *ufunc, PyObject *args,
     }
 
     if (Py_TYPE(op) != Py_TYPE(ret)) {
-        res = PyObject_CallMethod(op, "__array_wrap__", "O", ret);
+        PyObject * res = PyObject_CallMethod(op, "__array_wrap__", "O", ret);
         if (res == NULL) {
             PyErr_Clear();
         }
@@ -4243,13 +4230,13 @@ ufunc_seterr(PyObject *NPY_UNUSED(dummy), PyObject *args)
     PyObject *thedict;
     int res;
     PyObject *val;
-    static char *msg = "Error object must be a list of length 3";
 
     if (!PyArg_ParseTuple(args, "O", &val)) {
         return NULL;
     }
     if (!PyList_CheckExact(val) || PyList_GET_SIZE(val) != 3) {
-        PyErr_SetString(PyExc_ValueError, msg);
+        PyErr_SetString(PyExc_ValueError,
+                        "Error object must be a list of length 3");
         return NULL;
     }
     thedict = PyThreadState_GetDict();
@@ -4508,7 +4495,7 @@ PyUFunc_RegisterLoopForDescr(PyUFuncObject *ufunc,
     int i;
     int result = 0;
     int *arg_typenums;
-    PyObject *key, *cobj;
+    PyObject *key;
 
     if (user_dtype == NULL) {
         PyErr_SetString(PyExc_TypeError,
@@ -4541,7 +4528,7 @@ PyUFunc_RegisterLoopForDescr(PyUFuncObject *ufunc,
         function, arg_typenums, data);
 
     if (result == 0) {
-        cobj = PyDict_GetItem(ufunc->userloops, key);
+        PyObject * cobj = PyDict_GetItem(ufunc->userloops, key);
         if (cobj == NULL) {
             PyErr_SetString(PyExc_KeyError,
                 "userloop for user dtype not found");
@@ -5356,7 +5343,6 @@ ufunc_get_types(PyUFuncObject *ufunc)
 {
     /* return a list with types grouped input->output */
     PyObject *list;
-    PyObject *str;
     int k, j, n, nt = ufunc->ntypes;
     int ni = ufunc->nin;
     int no = ufunc->nout;
@@ -5368,6 +5354,7 @@ ufunc_get_types(PyUFuncObject *ufunc)
     t = PyArray_malloc(no+ni+2);
     n = 0;
     for (k = 0; k < nt; k++) {
+        PyObject *str;
         for (j = 0; j<ni; j++) {
             t[j] = _typecharfromnum(ufunc->types[n]);
             n++;
