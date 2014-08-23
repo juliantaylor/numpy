@@ -639,37 +639,25 @@ static void radf4(int ido, int l1, const Treal cc[], Treal ch[],
               __m128d tr2 = _mm_add_pd(tmp2, cr3);
               __m128d tr3 = _mm_sub_pd(tmp2, cr3);
 
-              __m128d r = _mm_add_pd(tr1, tr2);
-              ch[i_1 - 1 + 4*k*ido] = r[0];
-              ch[i_2 - 1 + 4*k*ido] = r[1];
+              __m128d r1 = _mm_add_pd(tr1, tr2);
+              __m128d r2 = _mm_add_pd(ti1, ti2);
+              _mm_storeu_pd(&ch[i_1 - 1 + 4*k*ido], _mm_shuffle_pd(r1, r2, _MM_SHUFFLE2(0, 0)));
+              _mm_storeu_pd(&ch[i_2 - 1 + 4*k*ido], _mm_shuffle_pd(r1, r2, _MM_SHUFFLE2(1, 1)));
 
-              r = _mm_sub_pd(tr2, tr1);
-              ch[ic_1 - 1 + (4*k + 3)*ido] = r[0];
-              ch[ic_2 - 1 + (4*k + 3)*ido] = r[1];
+              r1 = _mm_sub_pd(tr2, tr1);
+              r2 = _mm_sub_pd(ti1, ti2);
+              _mm_storeu_pd(&ch[ic_1 - 1 + (4*k + 3)*ido], _mm_shuffle_pd(r1, r2, _MM_SHUFFLE2(0, 0)));
+              _mm_storeu_pd(&ch[ic_2 - 1 + (4*k + 3)*ido], _mm_shuffle_pd(r1, r2, _MM_SHUFFLE2(1, 1)));
 
-              r = _mm_add_pd(ti1, ti2);
-              ch[i_1 + 4*k*ido] = r[0];
-              ch[i_2 + 4*k*ido] = r[1];
-              
-              r = _mm_sub_pd(ti1, ti2);
-              ch[ic_1 + (4*k + 3)*ido] = r[0];
-              ch[ic_2 + (4*k + 3)*ido] = r[1];
+              r1 = _mm_add_pd(ti4, tr3);
+              r2 = _mm_add_pd(tr4, ti3);
+              _mm_storeu_pd(&ch[i_1 - 1 + (4*k + 2)*ido], _mm_shuffle_pd(r1, r2, _MM_SHUFFLE2(0, 0)));
+              _mm_storeu_pd(&ch[i_2 - 1 + (4*k + 2)*ido], _mm_shuffle_pd(r1, r2, _MM_SHUFFLE2(1, 1)));
 
-              r = _mm_add_pd(ti4, tr3);
-              ch[i_1 - 1 + (4*k + 2)*ido] = r[0];
-              ch[i_2 - 1 + (4*k + 2)*ido] = r[1];
-
-              r = _mm_sub_pd(tr3, ti4);
-              ch[ic_1 - 1 + (4*k + 1)*ido] = r[0];
-              ch[ic_2 - 1 + (4*k + 1)*ido] = r[1];
-
-              r = _mm_add_pd(tr4, ti3);
-              ch[i_1 + (4*k + 2)*ido] = r[0];
-              ch[i_2 + (4*k + 2)*ido] = r[1];
-
-              r = _mm_sub_pd(tr4, ti3);
-              ch[ic_1 + (4*k + 1)*ido] = r[0];
-              ch[ic_2 + (4*k + 1)*ido] = r[1];
+              r1 = _mm_sub_pd(tr3, ti4);
+              r2 = _mm_sub_pd(tr4, ti3);
+              _mm_storeu_pd(&ch[ic_1 - 1 + (4*k + 1)*ido], _mm_shuffle_pd(r1, r2, _MM_SHUFFLE2(0, 0)));
+              _mm_storeu_pd(&ch[ic_2 - 1 + (4*k + 1)*ido], _mm_shuffle_pd(r1, r2, _MM_SHUFFLE2(1, 1)));
           }
 #endif
         for (; i<ido; i += 2) {
