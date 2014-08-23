@@ -632,7 +632,7 @@ static void radf4(int ido, int l1, const Treal cc[], Treal ch[],
               __m128d ti1 = _mm_add_pd(ci2, ci4);
               __m128d ti4 = _mm_sub_pd(ci2, ci4);
               
-              __m128d tmp1 = _mm_set_pd(ref(cc,i_1 + k*ido), ref(cc,i_2 + k*ido));
+              __m128d tmp1 = _mm_set_pd(ref(cc,i_1 + k*ido), ref(cc,i_1 + k*ido));
               __m128d tmp2 = _mm_set_pd(ref(cc,i_2 - 1 + k*ido), ref(cc,i_2 - 1 + k*ido));
               __m128d ti2 = _mm_add_pd(tmp1, ci3);
               __m128d ti3 = _mm_sub_pd(tmp1, ci3);
