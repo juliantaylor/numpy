@@ -26,7 +26,6 @@ Algorithmically based on Fortran-77 FFTPACK by Paul N. Swarztrauber (Version 4, 
 extern "C" {
 #endif
 
-
 /* ----------------------------------------------------------------------
    passf2, passf3, passf4, passf5, passf. Complex FFT passes fwd and bwd.
 ---------------------------------------------------------------------- */
@@ -543,6 +542,7 @@ static void radb3(int ido, int l1, const Treal cc[], Treal ch[],
     }
   } /* radb3 */
 
+#include <emmintrin.h>
 
 static void radf4(int ido, int l1, const Treal cc[], Treal ch[],
       const Treal wa1[], const Treal wa2[], const Treal wa3[])
@@ -561,7 +561,80 @@ static void radf4(int ido, int l1, const Treal cc[], Treal ch[],
     if (ido < 2) return;
     if (ido != 2) {
       for (k=0; k<l1; k++) {
-        for (i=2; i<ido; i += 2) {
+          i = 2;
+#ifdef DOUBLE
+        for (; i<ido - (ido % 2); i += 4) {
+              int i_1 = i;
+              int i_2 = i + 2;
+              int ic_1 = ido - i_1;
+              int ic_2 = ido - i_2;
+              Treal cr2_1 = wa1[i_1 - 2]*ref(cc,i_1 - 1 + (k + l1)*ido) + wa1[i_1 - 1]*ref(cc,i_1 + (k + l1)*ido);
+              Treal ci2_1 = wa1[i_1 - 2]*ref(cc,i_1 + (k + l1)*ido) - wa1[i_1 - 1]*ref(cc,i_1 - 1 + (k + l1)*ido);
+              Treal cr3_1 = wa2[i_1 - 2]*ref(cc,i_1 - 1 + (k + 2*l1)*ido) + wa2[i_1 - 1]*ref(cc,i_1 + (k + 2*l1)*ido);
+              Treal ci3_1 = wa2[i_1 - 2]*ref(cc,i_1 + (k + 2*l1)*ido) - wa2[i_1 - 1]*ref(cc,i_1 - 1 + (k + 2*l1)*ido);
+              Treal cr4_1 = wa3[i_1 - 2]*ref(cc,i_1 - 1 + (k + 3*l1)*ido) + wa3[i_1 - 1]*ref(cc,i_1 + (k + 3*l1)*ido);
+              Treal ci4_1 = wa3[i_1 - 2]*ref(cc,i_1 + (k + 3*l1)*ido) - wa3[i_1 - 1]*ref(cc,i_1 - 1 + (k + 3*l1)*ido);
+
+              Treal cr2_2 = wa1[i_2 - 2]*ref(cc,i_2 - 1 + (k + l1)*ido) + wa1[i_2 - 1]*ref(cc,i_2 + (k + l1)*ido);
+              Treal ci2_2 = wa1[i_2 - 2]*ref(cc,i_2 + (k + l1)*ido) - wa1[i_2 - 1]*ref(cc,i_2 - 1 + (k + l1)*ido);
+              Treal cr3_2 = wa2[i_2 - 2]*ref(cc,i_2 - 1 + (k + 2*l1)*ido) + wa2[i_2 - 1]*ref(cc,i_2 + (k + 2*l1)*ido);
+              Treal ci3_2 = wa2[i_2 - 2]*ref(cc,i_2 + (k + 2*l1)*ido) - wa2[i_2 - 1]*ref(cc,i_2 - 1 + (k + 2*l1)*ido);
+              Treal cr4_2 = wa3[i_2 - 2]*ref(cc,i_2 - 1 + (k + 3*l1)*ido) + wa3[i_2 - 1]*ref(cc,i_2 + (k + 3*l1)*ido);
+              Treal ci4_2 = wa3[i_2 - 2]*ref(cc,i_2 + (k + 3*l1)*ido) - wa3[i_2 - 1]*ref(cc,i_2 - 1 + (k + 3*l1)*ido);
+
+              __m128d cr2 = _mm_set_pd(cr2_1, cr2_2);
+              __m128d ci2 = _mm_set_pd(ci2_1, ci2_2);
+              __m128d cr3 = _mm_set_pd(cr3_1, cr3_2);
+              __m128d ci3 = _mm_set_pd(ci3_1, ci3_2);
+              __m128d cr4 = _mm_set_pd(cr4_1, cr4_2);
+              __m128d ci4 = _mm_set_pd(ci4_1, ci4_2);
+
+              __m128d tr1 = _mm_add_pd(cr2, cr4);
+              __m128d tr4 = _mm_sub_pd(cr4, cr2);
+              __m128d ti1 = _mm_add_pd(ci2, ci4);
+              __m128d ti4 = _mm_sub_pd(ci2, ci4);
+              
+              __m128d tmp1 = _mm_set_pd(ref(cc,i_1 + k*ido), ref(cc,i_2 + k*ido));
+              __m128d tmp2 = _mm_set_pd(ref(cc,i_2 - 1 + k*ido), ref(cc,i_2 - 1 + k*ido));
+              __m128d ti2 = _mm_add_pd(tmp1, ci3);
+              __m128d ti3 = _mm_sub_pd(tmp1, ci3);
+              __m128d tr2 = _mm_add_pd(tmp2, cr3);
+              __m128d tr3 = _mm_sub_pd(tmp2, cr3);
+
+              __m128d r = _mm_add_pd(tr1, tr2);
+              ch[i_1 - 1 + 4*k*ido] = r[0];
+              ch[i_2 - 1 + 4*k*ido] = r[1];
+
+              r = _mm_sub_pd(tr2, tr1);
+              ch[ic_1 - 1 + (4*k + 3)*ido] = r[0];
+              ch[ic_2 - 1 + (4*k + 3)*ido] = r[1];
+
+              r = _mm_add_pd(ti1, ti2);
+              ch[i_1 + 4*k*ido] = r[0];
+              ch[i_2 + 4*k*ido] = r[1];
+              
+              r = _mm_sub_pd(ti1, ti2);
+              ch[ic_1 + (4*k + 3)*ido] = r[0];
+              ch[ic_2 + (4*k + 3)*ido] = r[1];
+
+              r = _mm_add_pd(ti4, tr3);
+              ch[i_1 - 1 + (4*k + 2)*ido] = r[0];
+              ch[i_2 - 1 + (4*k + 2)*ido] = r[1];
+
+              r = _mm_sub_pd(tr3, ti4);
+              ch[ic_1 - 1 + (4*k + 1)*ido] = r[0];
+              ch[ic_2 - 1 + (4*k + 1)*ido] = r[1];
+
+              r = _mm_add_pd(tr4, ti3);
+              ch[i_1 + (4*k + 2)*ido] = r[0];
+              ch[i_2 + (4*k + 2)*ido] = r[1];
+
+              r = _mm_sub_pd(tr4, ti3);
+              ch[ic_1 + (4*k + 1)*ido] = r[0];
+              ch[ic_2 + (4*k + 1)*ido] = r[1];
+          }
+#endif
+        for (; i<ido; i += 2) {
           ic = ido - i;
           cr2 = wa1[i - 2]*ref(cc,i - 1 + (k + l1)*ido) + wa1[i - 1]*ref(cc,i + (k + l1)*ido);
           ci2 = wa1[i - 2]*ref(cc,i + (k + l1)*ido) - wa1[i - 1]*ref(cc,i - 1 + (k + l1)*ido);
@@ -1146,6 +1219,7 @@ static void radbg(int ido, int ip, int l1, int idl1,
 cfftf1, cfftf, cfftb, cffti1, cffti. Complex FFTs.
 ---------------------------------------------------------------------- */
 
+#include <string.h>
 static void cfftf1(int n, Treal c[], Treal ch[], const Treal wa[], const int ifac[MAXFAC+2], int isign)
   {
     int idot, i;
@@ -1200,7 +1274,7 @@ static void cfftf1(int n, Treal c[], Treal ch[], const Treal wa[], const int ifa
       iw += (ip - 1)*idot;
     }
     if (na == 0) return;
-    for (i=0; i<2*n; i++) c[i] = ch[i];
+    memcpy(c, ch, sizeof(*c) * 2 * n);
   } /* cfftf1 */
 
 
