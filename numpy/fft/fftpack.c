@@ -565,7 +565,7 @@ static void radf4(int ido, int l1, const Treal cc[], Treal ch[],
       for (k=0; k<l1; k++) {
           i = 2;
 #ifdef DOUBLE
-        for (; i<ido - (ido % 2); i += 4) {
+        for (; i<(ido - 2) - ((ido - 2) % 4); i += 4) {
               int i_1 = i;
               int i_2 = i + 2;
               int ic_1 = ido - i_1;
