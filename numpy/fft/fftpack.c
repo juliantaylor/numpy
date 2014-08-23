@@ -543,6 +543,8 @@ static void radb3(int ido, int l1, const Treal cc[], Treal ch[],
   } /* radb3 */
 
 #include <emmintrin.h>
+#pragma GCC target("sse3")
+#include <pmmintrin.h>
 
 static void radf4(int ido, int l1, const Treal cc[], Treal ch[],
       const Treal wa1[], const Treal wa2[], const Treal wa3[])
@@ -568,26 +570,62 @@ static void radf4(int ido, int l1, const Treal cc[], Treal ch[],
               int i_2 = i + 2;
               int ic_1 = ido - i_1;
               int ic_2 = ido - i_2;
-              Treal cr2_1 = wa1[i_1 - 2]*ref(cc,i_1 - 1 + (k + l1)*ido) + wa1[i_1 - 1]*ref(cc,i_1 + (k + l1)*ido);
-              Treal ci2_1 = wa1[i_1 - 2]*ref(cc,i_1 + (k + l1)*ido) - wa1[i_1 - 1]*ref(cc,i_1 - 1 + (k + l1)*ido);
-              Treal cr3_1 = wa2[i_1 - 2]*ref(cc,i_1 - 1 + (k + 2*l1)*ido) + wa2[i_1 - 1]*ref(cc,i_1 + (k + 2*l1)*ido);
-              Treal ci3_1 = wa2[i_1 - 2]*ref(cc,i_1 + (k + 2*l1)*ido) - wa2[i_1 - 1]*ref(cc,i_1 - 1 + (k + 2*l1)*ido);
-              Treal cr4_1 = wa3[i_1 - 2]*ref(cc,i_1 - 1 + (k + 3*l1)*ido) + wa3[i_1 - 1]*ref(cc,i_1 + (k + 3*l1)*ido);
-              Treal ci4_1 = wa3[i_1 - 2]*ref(cc,i_1 + (k + 3*l1)*ido) - wa3[i_1 - 1]*ref(cc,i_1 - 1 + (k + 3*l1)*ido);
+              __m128d vwa1_1 = _mm_loadu_pd(&wa1[i_1 - 2]);
+              __m128d vwa1_2 = _mm_loadu_pd(&wa1[i_2 - 2]);
+              //Treal cr2_1 = wa1[i_1 - 2]*ref(cc,i_1 - 1 + (k + l1)*ido) + wa1[i_1 - 1]*ref(cc,i_1 + (k + l1)*ido);
+              __m128d vcc1_1 = _mm_loadu_pd(&ref(cc,i_1 - 1 + (k + l1)*ido));
+              __m128d vcr2_1 = _mm_mul_pd(vwa1_1, vcc1_1);
 
-              Treal cr2_2 = wa1[i_2 - 2]*ref(cc,i_2 - 1 + (k + l1)*ido) + wa1[i_2 - 1]*ref(cc,i_2 + (k + l1)*ido);
-              Treal ci2_2 = wa1[i_2 - 2]*ref(cc,i_2 + (k + l1)*ido) - wa1[i_2 - 1]*ref(cc,i_2 - 1 + (k + l1)*ido);
-              Treal cr3_2 = wa2[i_2 - 2]*ref(cc,i_2 - 1 + (k + 2*l1)*ido) + wa2[i_2 - 1]*ref(cc,i_2 + (k + 2*l1)*ido);
-              Treal ci3_2 = wa2[i_2 - 2]*ref(cc,i_2 + (k + 2*l1)*ido) - wa2[i_2 - 1]*ref(cc,i_2 - 1 + (k + 2*l1)*ido);
-              Treal cr4_2 = wa3[i_2 - 2]*ref(cc,i_2 - 1 + (k + 3*l1)*ido) + wa3[i_2 - 1]*ref(cc,i_2 + (k + 3*l1)*ido);
-              Treal ci4_2 = wa3[i_2 - 2]*ref(cc,i_2 + (k + 3*l1)*ido) - wa3[i_2 - 1]*ref(cc,i_2 - 1 + (k + 3*l1)*ido);
+              //Treal cr2_2 = wa1[i_2 - 2]*ref(cc,i_2 - 1 + (k + l1)*ido) + wa1[i_2 - 1]*ref(cc,i_2 + (k + l1)*ido);
+              __m128d vcc1_2 = _mm_loadu_pd(&ref(cc,i_2 - 1 + (k + l1)*ido));
+              __m128d vcr2_2 = _mm_mul_pd(vwa1_2, vcc1_2);
 
-              __m128d cr2 = _mm_set_pd(cr2_1, cr2_2);
-              __m128d ci2 = _mm_set_pd(ci2_1, ci2_2);
-              __m128d cr3 = _mm_set_pd(cr3_1, cr3_2);
-              __m128d ci3 = _mm_set_pd(ci3_1, ci3_2);
-              __m128d cr4 = _mm_set_pd(cr4_1, cr4_2);
-              __m128d ci4 = _mm_set_pd(ci4_1, ci4_2);
+              __m128d cr2 = _mm_hadd_pd(vcr2_1, vcr2_2);
+
+              //Treal ci2_1 = wa1[i_1 - 2]*ref(cc,i_1 + (k + l1)*ido) - wa1[i_1 - 1]*ref(cc,i_1 - 1 + (k + l1)*ido);
+              __m128d vci2_1 = _mm_mul_pd(vwa1_1, _mm_shuffle_pd(vcc1_1, vcc1_1, _MM_SHUFFLE2(0, 1)));
+              //Treal ci2_2 = wa1[i_2 - 2]*ref(cc,i_2 + (k + l1)*ido) - wa1[i_2 - 1]*ref(cc,i_2 - 1 + (k + l1)*ido);
+              __m128d vci2_2 = _mm_mul_pd(vwa1_2, _mm_shuffle_pd(vcc1_2, vcc1_2, _MM_SHUFFLE2(0, 1)));
+
+              __m128d ci2 = _mm_hsub_pd(vci2_2, vci2_1);
+
+              __m128d vwa2_1 = _mm_loadu_pd(&wa2[i_1 - 2]);
+              __m128d vwa2_2 = _mm_loadu_pd(&wa2[i_2 - 2]);
+
+              //Treal cr3_1 = wa2[i_1 - 2]*ref(cc,i_1 - 1 + (k + 2*l1)*ido) + wa2[i_1 - 1]*ref(cc,i_1 + (k + 2*l1)*ido);
+              __m128d vcc2_1 = _mm_loadu_pd(&ref(cc,i_1 - 1 + (k + 2*l1)*ido));
+              __m128d vcr3_1 = _mm_mul_pd(vwa2_1, vcc2_1);
+              //Treal cr3_2 = wa2[i_2 - 2]*ref(cc,i_2 - 1 + (k + 2*l1)*ido) + wa2[i_2 - 1]*ref(cc,i_2 + (k + 2*l1)*ido);
+              __m128d vcc2_2 = _mm_loadu_pd(&ref(cc,i_2 - 1 + (k + 2*l1)*ido));
+              __m128d vcr3_2 = _mm_mul_pd(vwa2_2, vcc2_2);
+
+              __m128d cr3 = _mm_hadd_pd(vcr3_1, vcr3_2);
+
+              //Treal ci3_1 = wa2[i_1 - 2]*ref(cc,i_1 + (k + 2*l1)*ido) - wa2[i_1 - 1]*ref(cc,i_1 - 1 + (k + 2*l1)*ido);
+              __m128d vci3_1 = _mm_mul_pd(vwa2_1, _mm_shuffle_pd(vcc2_1, vcc2_1, _MM_SHUFFLE2(0, 1)));
+              //Treal ci3_2 = wa2[i_2 - 2]*ref(cc,i_2 + (k + 2*l1)*ido) - wa2[i_2 - 1]*ref(cc,i_2 - 1 + (k + 2*l1)*ido);
+              __m128d vci3_2 = _mm_mul_pd(vwa2_2, _mm_shuffle_pd(vcc2_2, vcc2_2, _MM_SHUFFLE2(0, 1)));
+
+              __m128d ci3 = _mm_hsub_pd(vci3_2, vci3_1);
+
+              __m128d vwa3_1 = _mm_loadu_pd(&wa3[i_1 - 2]);
+              __m128d vwa3_2 = _mm_loadu_pd(&wa3[i_2 - 2]);
+
+              //Treal cr4_1 = wa3[i_1 - 2]*ref(cc,i_1 - 1 + (k + 3*l1)*ido) + wa3[i_1 - 1]*ref(cc,i_1 + (k + 3*l1)*ido);
+              __m128d vcc3_1 = _mm_loadu_pd(&ref(cc,i_1 - 1 + (k + 3*l1)*ido));
+              __m128d vcr4_1 = _mm_mul_pd(vwa3_1, vcc3_1);
+              //Treal cr4_2 = wa3[i_2 - 2]*ref(cc,i_2 - 1 + (k + 3*l1)*ido) + wa3[i_2 - 1]*ref(cc,i_2 + (k + 3*l1)*ido);
+              __m128d vcc3_2 = _mm_loadu_pd(&ref(cc,i_2 - 1 + (k + 3*l1)*ido));
+              __m128d vcr4_2 = _mm_mul_pd(vwa3_2, vcc3_2);
+
+              __m128d cr4 = _mm_hadd_pd(vcr4_1, vcr4_2);
+
+              //Treal ci4_1 = wa3[i_1 - 2]*ref(cc,i_1 + (k + 3*l1)*ido) - wa3[i_1 - 1]*ref(cc,i_1 - 1 + (k + 3*l1)*ido);
+              __m128d vci4_1 = _mm_mul_pd(vwa3_1, _mm_shuffle_pd(vcc3_1, vcc3_1, _MM_SHUFFLE2(0, 1)));
+              //Treal ci4_2 = wa3[i_2 - 2]*ref(cc,i_2 + (k + 3*l1)*ido) - wa3[i_2 - 1]*ref(cc,i_2 - 1 + (k + 3*l1)*ido);
+              __m128d vci4_2 = _mm_mul_pd(vwa3_2, _mm_shuffle_pd(vcc3_2, vcc3_2, _MM_SHUFFLE2(0, 1)));
+
+              __m128d ci4 = _mm_hsub_pd(vci4_2, vci4_1);
 
               __m128d tr1 = _mm_add_pd(cr2, cr4);
               __m128d tr4 = _mm_sub_pd(cr4, cr2);
