@@ -1374,7 +1374,7 @@ static void rfftf1(int n, Treal c[], Treal ch[], const Treal wa[], const int ifa
       l2 = l1;
     }
     if (na == 1) return;
-    for (i = 0; i < n; i++) c[i] = ch[i];
+    memcpy(c, ch, sizeof(*c) * n);
   } /* rfftf1 */
 
 
