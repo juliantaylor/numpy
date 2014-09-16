@@ -164,69 +164,46 @@ typedef struct _tagPyUFuncObject {
         PyObject *obj;
         PyObject *userloops;
 
-        /* generalized ufunc parameters */
-
-        /* 0 for scalar ufunc; 1 for generalized ufunc */
-        int core_enabled;
-        /* number of distinct dimension names in signature */
-        int core_num_dim_ix;
-
         /*
-         * dimension indices of input/output argument k are stored in
-         * core_dim_ixs[core_offsets[k]..core_offsets[k]+core_num_dims[k]-1]
+         * following was the numpy >= 1.6 abi deemed unlikely to be used by
+         * third parties and moved to a private structure.
+         * kept the members as padding to silence cython sizeof(ufunc) check
          */
 
-        /* numbers of core dimensions of each argument */
-        int *core_num_dims;
-        /*
-         * dimension indices in a flatted form; indices
-         * are in the range of [0,core_num_dim_ix)
-         */
-        int *core_dim_ixs;
-        /*
-         * positions of 1st core dimensions of each
-         * argument in core_dim_ixs
-         */
+        /* was core_enabled */
+        int __padding1;
+        /* was core_num_dim_ix */
+        int __padding2;
+    
+        /* was core_num_dims */
+        int *__padding3;
+        /* was core_dim_ixs */
+        int *__padding4;
+        /* was core_offsets */
         int *core_offsets;
-        /* signature string for printing purpose */
-        char *core_signature;
-
-        /*
-         * A function which resolves the types and fills an array
-         * with the dtypes for the inputs and outputs.
-         */
+        /* was core_signature */
+        char *__padding5;
+    
+        /* kept to avoid changing ufunc generation */
         PyUFunc_TypeResolutionFunc *type_resolver;
         /*
-         * A function which returns an inner loop written for
-         * NumPy 1.6 and earlier ufuncs. This is for backwards
-         * compatibility, and may be NULL if inner_loop_selector
-         * is specified.
+         * innerloop selector, not legacy, wrong naming due to incomplete
+         * revert of experimental branch
          */
         PyUFunc_LegacyInnerLoopSelectionFunc *legacy_inner_loop_selector;
         /*
-         * A function which returns an inner loop for the new mechanism
-         * in NumPy 1.7 and later. If provided, this is used, otherwise
-         * if NULL the legacy_inner_loop_selector is used instead.
+         * was inner_loop_selector, repurposed for private data must be NULL when
+         * not initialized from numpy
+         * used this one as it was required to be NULL in all release numpy
+         * versions
          */
-        PyUFunc_InnerLoopSelectionFunc *inner_loop_selector;
-        /*
-         * A function which returns a masked inner loop for the ufunc.
-         */
-        PyUFunc_MaskedInnerLoopSelectionFunc *masked_inner_loop_selector;
-
-        /*
-         * List of flags for each operand when ufunc is called by nditer object.
-         * These flags will be used in addition to the default flags for each
-         * operand set by nditer object.
-         */
-        npy_uint32 *op_flags;
-
-        /*
-         * List of global flags used when ufunc is called by nditer object.
-         * These flags will be used in addition to the default global flags
-         * set by nditer object.
-         */
-        npy_uint32 iter_flags;
+        void * internal;
+        /* was masked_inner_loop_selector */
+        PyUFunc_MaskedInnerLoopSelectionFunc *__padding7;
+        /* was op_flags */
+        npy_uint32 *__padding8;
+        /* was iter_flags */
+        npy_uint32 __padding9;
 } PyUFuncObject;
 
 #include "arrayobject.h"

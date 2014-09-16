@@ -29,6 +29,7 @@
 #include "numpy/ufuncobject.h"
 #include "numpy/npy_3kcompat.h"
 #include "abstract.h"
+#include "ufunc_object.h"
 
 #include "numpy/npy_math.h"
 
@@ -90,6 +91,7 @@ ufunc_frompyfunc(PyObject *NPY_UNUSED(dummy), PyObject *args, PyObject *NPY_UNUS
     int nin, nout, i;
     PyUFunc_PyFuncData *fdata;
     PyUFuncObject *self;
+    PyUfuncObjectPrivate *selfp;
     char *fname, *str;
     Py_ssize_t fname_len = -1;
     int offset[2];
@@ -105,7 +107,6 @@ ufunc_frompyfunc(PyObject *NPY_UNUSED(dummy), PyObject *args, PyObject *NPY_UNUS
     if (self == NULL) {
         return NULL;
     }
-    PyObject_Init((PyObject *)self, &PyUFunc_Type);
 
     self->userloops = NULL;
     self->nin = nin;
@@ -115,23 +116,16 @@ ufunc_frompyfunc(PyObject *NPY_UNUSED(dummy), PyObject *args, PyObject *NPY_UNUS
     self->functions = pyfunc_functions;
     self->ntypes = 1;
     self->check_return = 0;
-
-    /* generalized ufunc */
-    self->core_enabled = 0;
-    self->core_num_dim_ix = 0;
-    self->core_num_dims = NULL;
-    self->core_dim_ixs = NULL;
-    self->core_offsets = NULL;
-    self->core_signature = NULL;
-    self->op_flags = PyArray_malloc(sizeof(npy_uint32)*self->nargs);
-    if (self->op_flags == NULL) {
-        return PyErr_NoMemory();
-    }
-    memset(self->op_flags, 0, sizeof(npy_uint32)*self->nargs);
-    self->iter_flags = 0;
-
     self->type_resolver = &object_ufunc_type_resolver;
     self->legacy_inner_loop_selector = &object_ufunc_loop_selector;
+
+    selfp = init_private_ufunc(self);
+    if (selfp == NULL) {
+        PyArray_free(self);
+        return NULL;
+    }
+
+    PyObject_Init((PyObject *)self, &PyUFunc_Type);
 
     pyname = PyObject_GetAttrString(function, "__name__");
     if (pyname) {
