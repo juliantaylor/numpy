@@ -77,7 +77,7 @@ npyiter_get_common_dtype(int nop, PyArrayObject **op,
                         PyArray_Descr **op_request_dtypes,
                         int only_inputs);
 static PyArrayObject *
-npyiter_new_temp_array(NpyIter *iter, PyTypeObject *subtype,
+npyiter_new_temp_array(NpyIter *iter, PyTypeObject *subtype, PyArrayObject * subobj,
                 npy_uint32 flags, npyiter_opitflags *op_itflags,
                 int op_ndim, npy_intp *shape,
                 PyArray_Descr *op_dtype, int *op_axes);
@@ -85,12 +85,14 @@ static int
 npyiter_allocate_arrays(NpyIter *iter,
                         npy_uint32 flags,
                         PyArray_Descr **op_dtype, PyTypeObject *subtype,
+                        PyArrayObject * subobj,
                         npy_uint32 *op_flags, npyiter_opitflags *op_itflags,
                         int **op_axes);
 static void
 npyiter_get_priority_subtype(int nop, PyArrayObject **op,
                             npyiter_opitflags *op_itflags,
-                            double *subtype_priority, PyTypeObject **subtype);
+                            double *subtype_priority, PyTypeObject **subtype,
+                            PyArrayObject ** subobj);
 static int
 npyiter_allocate_transfer_functions(NpyIter *iter);
 
@@ -331,9 +333,10 @@ NpyIter_AdvancedNew(int nop, PyArrayObject **op_in, npy_uint32 flags,
 
     NPY_IT_TIME_POINT(c_find_best_axis_ordering);
 
+    PyArrayObject * subobj = NULL;
     if (need_subtype) {
         npyiter_get_priority_subtype(nop, op, op_itflags,
-                                     &subtype_priority, &subtype);
+                                     &subtype_priority, &subtype, &subobj);
     }
 
     NPY_IT_TIME_POINT(c_get_priority_subtype);
@@ -401,8 +404,8 @@ NpyIter_AdvancedNew(int nop, PyArrayObject **op_in, npy_uint32 flags,
      * copying due to casting/byte order/alignment can be
      * done now using a memory layout matching the iterator.
      */
-    if (!npyiter_allocate_arrays(iter, flags, op_dtype, subtype, op_flags,
-                            op_itflags, op_axes)) {
+    if (!npyiter_allocate_arrays(iter, flags, op_dtype, subtype, subobj,
+                                 op_flags, op_itflags, op_axes)) {
         NpyIter_Deallocate(iter);
         return NULL;
     }
@@ -2460,6 +2463,7 @@ npyiter_get_common_dtype(int nop, PyArrayObject **op,
  */
 static PyArrayObject *
 npyiter_new_temp_array(NpyIter *iter, PyTypeObject *subtype,
+                PyArrayObject * subobj,
                 npy_uint32 flags, npyiter_opitflags *op_itflags,
                 int op_ndim, npy_intp *shape,
                 PyArray_Descr *op_dtype, int *op_axes)
@@ -2491,7 +2495,7 @@ npyiter_new_temp_array(NpyIter *iter, PyTypeObject *subtype,
     if (op_ndim == 0) {
         Py_INCREF(op_dtype);
         ret = (PyArrayObject *)PyArray_NewFromDescr(subtype, op_dtype, 0,
-                               NULL, NULL, NULL, 0, NULL);
+                               NULL, NULL, NULL, 0, subobj);
 
         return ret;
     }
@@ -2667,7 +2671,7 @@ npyiter_new_temp_array(NpyIter *iter, PyTypeObject *subtype,
     /* Allocate the temporary array */
     Py_INCREF(op_dtype);
     ret = (PyArrayObject *)PyArray_NewFromDescr(subtype, op_dtype, op_ndim,
-                               shape, strides, NULL, 0, NULL);
+                               shape, strides, NULL, 0, subobj);
     if (ret == NULL) {
         return NULL;
     }
@@ -2694,6 +2698,7 @@ static int
 npyiter_allocate_arrays(NpyIter *iter,
                         npy_uint32 flags,
                         PyArray_Descr **op_dtype, PyTypeObject *subtype,
+                        PyArrayObject * subobj,
                         npy_uint32 *op_flags, npyiter_opitflags *op_itflags,
                         int **op_axes)
 {
@@ -2724,16 +2729,18 @@ npyiter_allocate_arrays(NpyIter *iter,
 
         /* NULL means an output the iterator should allocate */
         if (op[iop] == NULL) {
-            PyArrayObject *out;
+            PyArrayObject *out, *op_subobj;
             PyTypeObject *op_subtype;
             int ondim = ndim;
 
             /* Check whether the subtype was disabled */
             op_subtype = (op_flags[iop] & NPY_ITER_NO_SUBTYPE) ?
                                                 &PyArray_Type : subtype;
+            op_subobj = (op_flags[iop] & NPY_ITER_NO_SUBTYPE) ?
+                                                NULL : subobj;
 
             /* Allocate the output array */
-            out = npyiter_new_temp_array(iter, op_subtype,
+            out = npyiter_new_temp_array(iter, op_subtype, op_subobj,
                                         flags, &op_itflags[iop],
                                         ondim,
                                         NULL,
@@ -2806,7 +2813,7 @@ npyiter_allocate_arrays(NpyIter *iter,
             int ondim = PyArray_NDIM(op[iop]);
 
             /* Allocate the temporary array, if possible */
-            temp = npyiter_new_temp_array(iter, &PyArray_Type,
+            temp = npyiter_new_temp_array(iter, &PyArray_Type, NULL,
                                         flags, &op_itflags[iop],
                                         ondim,
                                         PyArray_DIMS(op[iop]),
@@ -2986,7 +2993,8 @@ static void
 npyiter_get_priority_subtype(int nop, PyArrayObject **op,
                             npyiter_opitflags *op_itflags,
                             double *subtype_priority,
-                            PyTypeObject **subtype)
+                            PyTypeObject **subtype,
+                            PyArrayObject ** subobj)
 {
     int iop;
 
@@ -2996,6 +3004,7 @@ npyiter_get_priority_subtype(int nop, PyArrayObject **op,
             if (priority > *subtype_priority) {
                 *subtype_priority = priority;
                 *subtype = Py_TYPE(op[iop]);
+                *subobj = op[iop];
             }
         }
     }
