@@ -379,6 +379,27 @@ if sys.version_info[0] < 3:
     getbuffer = multiarray.getbuffer
 int_asbuffer = multiarray.int_asbuffer
 where = multiarray.where
+def where(cond, *args):
+    n = len(args)
+    if n == 0:
+        return multiarray.where(cond)
+    elif n == 2:
+        a, b = args
+        #ara = np.asanyarray(a) disabled for testing
+        #abb = np.asanyarray(b)
+        ara, arb = a, b
+        if type(ara) == multiarray.ndarray and type(arb) == multiarray.ndarray:
+            return multiarray.where(cond, a, b)
+        else:
+            from numpy.lib.stride_tricks import broadcast_arrays
+            rtype = multiarray.result_type(a, b)
+            cond, a, b = broadcast_arrays(cond, a, b)
+            cond = cond.astype(bool, casting='unsafe', copy=False)
+            res = b.astype(rtype)
+            res[cond] = a[cond]
+            return res
+    else:
+        raise TypeError("function takes at most 3 arguments (%d given)" % n)
 concatenate = multiarray.concatenate
 fastCopyAndTranspose = multiarray._fastCopyAndTranspose
 set_numeric_ops = multiarray.set_numeric_ops
