@@ -4448,7 +4448,7 @@ PyMODINIT_FUNC initmultiarray(void) {
     Py_INCREF(&NpyBusDayCalendar_Type);
     PyDict_SetItemString(d, "busdaycalendar",
                             (PyObject *)&NpyBusDayCalendar_Type);
-
+    initscalarmath();
     set_flaginfo(d);
 
     if (!intern_strings()) {

@@ -777,6 +777,7 @@ def configuration(parent_package='',top_path=None):
             join('src', 'multiarray', 'ucsnarrow.h'),
             join('src', 'multiarray', 'usertypes.h'),
             join('src', 'multiarray', 'vdot.h'),
+            join('src', 'multiarray', 'scalarmath.c.src'),
             join('src', 'private', 'lowlevel_strided_loops.h'),
             join('include', 'numpy', 'arrayobject.h'),
             join('include', 'numpy', '_neighborhood_iterator_imp.h'),
@@ -827,6 +828,7 @@ def configuration(parent_package='',top_path=None):
             join('src', 'multiarray', 'item_selection.c'),
             join('src', 'multiarray', 'iterators.c'),
             join('src', 'multiarray', 'lowlevel_strided_loops.c.src'),
+            join('src', 'multiarray', 'scalarmath.c.src'),
             join('src', 'multiarray', 'mapping.c'),
             join('src', 'multiarray', 'methods.c'),
             join('src', 'multiarray', 'multiarraymodule.c'),
@@ -941,21 +943,6 @@ def configuration(parent_package='',top_path=None):
                                  generate_umath_c,
                                  generate_ufunc_api],
                          depends = deps + umath_deps,
-                         libraries = ['npymath'],
-                         )
-
-    #######################################################################
-    #                         scalarmath module                           #
-    #######################################################################
-
-    config.add_extension('scalarmath',
-                         sources = [join('src', 'scalarmathmodule.c.src'),
-                                    join('src', 'private', 'scalarmathmodule.h.src'),
-                                  generate_config_h,
-                                  generate_numpyconfig_h,
-                                  generate_numpy_api,
-                                  generate_ufunc_api],
-                         depends = deps + npymath_sources,
                          libraries = ['npymath'],
                          )
 
