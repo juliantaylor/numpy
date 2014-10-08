@@ -55,11 +55,12 @@ NPY_NO_EXPORT int NPY_NUMUSERTYPES = 0;
 #include "array_assign.h"
 #include "common.h"
 #include "ufunc_override.h"
-#include "scalarmathmodule.h" /* for npy_mul_with_overflow_intp */
 #include "multiarraymodule.h"
 #include "cblasfuncs.h"
 #include "vdot.h"
-#include "templ_common.h"
+#include "templ_common.h" /* for npy_mul_with_overflow_intp */
+
+NPY_NO_EXPORT void add_scalarmath(void);
 
 /* Only here for API compatibility */
 NPY_NO_EXPORT PyTypeObject PyBigArray_Type;

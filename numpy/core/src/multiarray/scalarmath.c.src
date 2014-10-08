@@ -16,7 +16,7 @@
 #include "npy_pycompat.h"
 
 #include "numpy/halffloat.h"
-#include "scalarmathmodule.h"
+#include "templ_common.h"
 
 /* Basic operations:
  *
@@ -1590,7 +1590,7 @@ static PyNumberMethods @name@_as_number = {
 };
 /**end repeat**/
 
-static void
+NPY_NO_EXPORT void
 add_scalarmath(void)
 {
     /**begin repeat
