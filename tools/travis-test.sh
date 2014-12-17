@@ -3,6 +3,11 @@ set -ex
 
 # travis boxes give you 1.5 cpus
 export NPY_NUM_BUILD_JOBS=2
+export CCACHE_DIR=$HOME/npy_ccache
+export CCACHE_COMPRESS=1
+ccache -M 50M || true
+ccache -s || true
+export PATH=/usr/lib/ccache:$PATH
 
 # setup env
 if [ -r /usr/lib/libeatmydata/libeatmydata.so ]; then
