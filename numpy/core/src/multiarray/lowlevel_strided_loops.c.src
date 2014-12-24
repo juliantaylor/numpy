@@ -1380,7 +1380,7 @@ mapiter_trivial_@name@(PyArrayObject *self, PyArrayObject *ind,
 
     npy_intp itersize;
 
-    int is_aligned = PyArray_ISALIGNED(self) && PyArray_ISALIGNED(result);
+    int is_aligned = IsAligned(self, 1) && IsAligned(result, 1);
     int needs_api = PyDataType_REFCHK(PyArray_DESCR(self));
 
     PyArray_CopySwapFunc *copyswap = PyArray_DESCR(self)->f->copyswap;
@@ -1513,7 +1513,7 @@ mapiter_@name@(PyArrayMapIterObject *mit)
      * could also check extra_op is buffered, but it should rarely matter.
      */
 
-    is_aligned = PyArray_ISALIGNED(array) && PyArray_ISALIGNED(mit->extra_op);
+    is_aligned = IsAligned(array, 1) && IsAligned(mit->extra_op, 1);
 
     if (mit->size == 0) {
        return 0;

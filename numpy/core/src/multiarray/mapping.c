@@ -989,7 +989,7 @@ array_boolean_subscript(PyArrayObject *self,
 
         /* Get a dtype transfer function */
         NpyIter_GetInnerFixedStrideArray(iter, fixed_strides);
-        if (PyArray_GetDTypeTransferFunction(PyArray_ISALIGNED(self),
+        if (PyArray_GetDTypeTransferFunction(IsAligned(self, 1),
                         fixed_strides[0], itemsize,
                         dtype, dtype,
                         0,
@@ -1184,7 +1184,7 @@ array_assign_boolean_subscript(PyArrayObject *self,
         /* Get a dtype transfer function */
         NpyIter_GetInnerFixedStrideArray(iter, fixed_strides);
         if (PyArray_GetDTypeTransferFunction(
-                        PyArray_ISALIGNED(self) && PyArray_ISALIGNED(v),
+                        IsAligned(self, 1) && IsAligned(v, 1),
                         v_stride, fixed_strides[0],
                         PyArray_DESCR(v), PyArray_DESCR(self),
                         0,
@@ -1492,7 +1492,7 @@ array_subscript(PyArrayObject *self, PyObject *op)
                 /* Check if the type is equivalent to INTP */
                 PyArray_ITEMSIZE(ind) == sizeof(npy_intp) &&
                 PyArray_DESCR(ind)->kind == 'i' &&
-                PyArray_ISALIGNED(ind) &&
+                IsAligned(ind, 1) &&
                 PyDataType_ISNOTSWAPPED(PyArray_DESCR(ind))) {
 
             Py_INCREF(PyArray_DESCR(self));
@@ -1936,7 +1936,7 @@ array_assign_subscript(PyArrayObject *self, PyObject *ind, PyObject *op)
                 /* Check if the type is equivalent to INTP */
                 PyArray_ITEMSIZE(ind) == sizeof(npy_intp) &&
                 PyArray_DESCR(ind)->kind == 'i' &&
-                PyArray_ISALIGNED(ind) &&
+                IsAligned(ind, 1) &&
                 PyDataType_ISNOTSWAPPED(PyArray_DESCR(ind))) {
 
             /* trivial_set checks the index for us */
@@ -2465,7 +2465,7 @@ PyArray_MapIterCheckIndices(PyArrayMapIterObject *mit)
                 /* Check if the type is equivalent to INTP */
                 PyArray_ITEMSIZE(op) == sizeof(npy_intp) &&
                 PyArray_DESCR(op)->kind == 'i' &&
-                PyArray_ISALIGNED(op) &&
+                IsAligned(op, 1) &&
                 PyDataType_ISNOTSWAPPED(PyArray_DESCR(op))) {
             char *data;
             npy_intp stride;

@@ -64,7 +64,7 @@ PyArray_UpdateFlags(PyArrayObject *ret, int flagmask)
         _UpdateContiguousFlags(ret);
     }
     if (flagmask & NPY_ARRAY_ALIGNED) {
-        if (_IsAligned(ret)) {
+        if (IsAligned(ret, 0)) {
             PyArray_ENABLEFLAGS(ret, NPY_ARRAY_ALIGNED);
         }
         else {

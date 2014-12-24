@@ -676,15 +676,47 @@ _zerofill(PyArrayObject *ret)
 }
 
 NPY_NO_EXPORT int
-_IsAligned(PyArrayObject *ap)
+IsAligned(PyArrayObject *ap, int copy_purpose)
 {
     unsigned int i;
-    npy_uintp aligned;
-    npy_uintp alignment = PyArray_DESCR(ap)->alignment;
+    npy_uintp aligned, alignment;
+    /* TODO determine proper alignment of flexible types */
 
-    /* alignment 1 types should have a efficient alignment for copy loops */
-    if (PyArray_ISFLEXIBLE(ap) || PyArray_ISSTRING(ap)) {
-        alignment = NPY_MAX_COPY_ALIGNMENT;
+    /*
+     * copy functions work on the full item not each submember so may require
+     * higher alignment
+     * e.g. complex float needs copy alignment 8 but access alignment 4
+     */
+    if (copy_purpose) {
+        npy_intp itemsize = PyArray_ITEMSIZE(ap);
+        if (PyArray_ISFLEXIBLE(ap) || PyArray_ISSTRING(ap)) {
+            /* power of two sizes may be copied in itemwise operations */
+            if (npy_is_power_of_two(itemsize)) {
+                alignment = NPY_VMIN(itemsize, NPY_MAX_COPY_ALIGNMENT);
+            }
+            else {
+                if (PyArray_TYPE(ap) == NPY_UNICODE) {
+                    alignment = PyArray_DESCR(ap)->alignment;
+                }
+                else {
+                    /* memcpy will be used, needs no alignment */
+                    alignment = 1;
+                }
+            }
+        }
+        else {
+            /* use itemsize to handle complex types correctly */
+            alignment = itemsize;
+        }
+    }
+    else {
+        /* non-copy operations never access the full compound object */
+        if (PyArray_ISFLEXIBLE(ap) || PyArray_TYPE(ap) == NPY_STRING) {
+            alignment = 1;
+        }
+        else {
+            alignment = PyArray_DESCR(ap)->alignment;
+        }
     }
 
     if (alignment == 1) {

@@ -1117,7 +1117,7 @@ npyiter_prepare_one_operand(PyArrayObject **op,
         /* Check if the operand is aligned */
         if (op_flags & NPY_ITER_ALIGNED) {
             /* Check alignment */
-            if (!PyArray_ISALIGNED(*op)) {
+            if (!IsAligned(*op, 1)) {
                 NPY_IT_DBG_PRINT("Iterator: Setting NPY_OP_ITFLAG_CAST "
                                     "because of NPY_ITER_ALIGNED\n");
                 *op_itflags |= NPY_OP_ITFLAG_CAST;
@@ -2867,7 +2867,7 @@ npyiter_allocate_arrays(NpyIter *iter,
              * If the operand is aligned, any buffering can use aligned
              * optimizations.
              */
-            if (PyArray_ISALIGNED(op[iop])) {
+            if (IsAligned(op[iop], 1)) {
                 op_itflags[iop] |= NPY_OP_ITFLAG_ALIGNED;
             }
         }

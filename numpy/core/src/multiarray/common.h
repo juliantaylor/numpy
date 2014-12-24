@@ -7,6 +7,9 @@
 
 #define error_converting(x)  (((x) == -1) && PyErr_Occurred())
 
+#define NPY_VMAX(a, b) ((a) > (b) ? (a) : (b))
+#define NPY_VMIN(a, b) ((a) < (b) ? (a) : (b))
+
 #ifdef NPY_ALLOW_THREADS
 #define NPY_BEGIN_THREADS_NDITER(iter) \
         do { \
@@ -60,7 +63,7 @@ NPY_NO_EXPORT int
 _zerofill(PyArrayObject *ret);
 
 NPY_NO_EXPORT int
-_IsAligned(PyArrayObject *ap);
+IsAligned(PyArrayObject *ap, int copy_purpose);
 
 NPY_NO_EXPORT npy_bool
 _IsWriteable(PyArrayObject *ap);
@@ -118,6 +121,14 @@ check_and_adjust_index(npy_intp *index, npy_intp max_item, int axis,
     return 0;
 }
 
+/*
+ * return true if value is a power of two
+ */
+static NPY_INLINE int
+npy_is_power_of_two(const npy_uintp v)
+{
+    return ((v & (v - 1)) == 0);
+}
 
 /*
  * return true if pointer is aligned to 'alignment'
@@ -129,7 +140,7 @@ npy_is_aligned(const void * p, const npy_uintp alignment)
      * alignment is usually a power of two
      * the test is faster than a direct modulo
      */
-    if (NPY_LIKELY((alignment & (alignment - 1)) == 0)) {
+    if (NPY_LIKELY(npy_is_power_of_two(alignment))) {
         return ((npy_uintp)(p) & ((alignment) - 1)) == 0;
     }
     else {

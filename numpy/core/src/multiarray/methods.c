@@ -1737,11 +1737,11 @@ array_setstate(PyArrayObject *self, PyObject *args)
         fa->data = datastr;
 #ifndef NPY_PY3K
         /* Check that the string is not interned */
-        if (!_IsAligned(self) || swap || PyString_CHECK_INTERNED(rawdata)) {
+        if (!IsAligned(self, swap) || swap || PyString_CHECK_INTERNED(rawdata)) {
 #else
         /* Bytes should always be considered immutable, but we just grab the
          * pointer if they are large, to save memory. */
-        if (!_IsAligned(self) || swap || (len <= 1000)) {
+        if (!IsAligned(self, swap) || swap || (len <= 1000)) {
 #endif
             npy_intp num = PyArray_NBYTES(self);
             fa->data = PyDataMem_NEW(num);
@@ -2260,7 +2260,7 @@ array_setflags(PyArrayObject *self, PyObject *args, PyObject *kwds)
         if (PyObject_Not(align_flag)) {
             PyArray_CLEARFLAGS(self, NPY_ARRAY_ALIGNED);
         }
-        else if (_IsAligned(self)) {
+        else if (IsAligned(self, 0)) {
             PyArray_ENABLEFLAGS(self, NPY_ARRAY_ALIGNED);
         }
         else {
