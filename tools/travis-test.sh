@@ -23,7 +23,11 @@ setup_base()
   # install' also has the advantage that it tests that numpy is 'pip
   # install' compatible, see e.g. gh-2766...
 if [ -z "$USE_DEBUG" ]; then
-  $PIP install .
+  sysflags="$($PYTHON -c "from distutils import sysconfig; print (sysconfig.get_config_var('CFLAGS'))")"
+  # windows compilers have this requirement
+  CFLAGS="$sysflags -Werror=declaration-after-statement -Werror=nonnull -Wlogical-op" $PIP install . 2>&1 | tee log
+  grep -v "_configtest" log | grep -vE "ld returned 1|no previously-included files matching" | grep -E "warning\>";
+  test $(grep -v "_configtest" log | grep -vE "ld returned 1|no previously-included files matching" | grep -E "warning\>" -c) -lt 2;
 else
   sysflags="$($PYTHON -c "from distutils import sysconfig; print (sysconfig.get_config_var('CFLAGS'))")"
   # windows compilers have this requirement
