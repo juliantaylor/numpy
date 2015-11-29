@@ -4,6 +4,15 @@
 /* utility functions that profit from templates */
 
 #include "numpy/npy_common.h"
+/**begin repeat
+ *  #isa = sse2, sse3, fma, avx#
+ */
+int vect_cor3_@isa@(double * d, double *k, double *o, npy_intp ostride, npy_uintp nd);
+int vect_cor4_@isa@(double * d, double *k, double *o, npy_intp ostride, npy_uintp nd);
+int vect_cor5_@isa@(double * d, double *k, double *o, npy_intp ostride, npy_uintp nd);
+int vect_cor7_@isa@(double * d, double *k, double *o, npy_intp ostride, npy_uintp nd);
+/**end repeat**/
+
 
 /**begin repeat
  *  #name = int, uint, long, ulong,

@@ -26,6 +26,8 @@
 #include <emmintrin.h>
 #endif
 
+#include "templ_common.h"
+
 #include "numpyos.h"
 #include <string.h>
 
@@ -4035,6 +4037,35 @@ small_correlate(const char * d_, npy_intp dstride,
     if (nk > 11 || dtype != ktype) {
         return 0;
     }
+
+#ifdef NPY_HAVE_SSE2_INTRINSICS
+    if (dtype == NPY_DOUBLE && dstride == sizeof(double) &&
+        kstride == sizeof(double) && nd >= 2) {
+/**begin repeat
+ *  #isa = fma, avx, sse3, sse2#
+ *  #case = if, else if, else if, else if#
+ */
+        @case@ (NPY_CPU_SUPPORTS("@isa@")) {
+            if (nk == 3) {
+                return vect_cor3_@isa@((double*)d_, (double*)k_, (double*)out_,
+                                       ostride / 8, (npy_uintp)nd);
+            }
+            else if (nk == 4) {
+                return vect_cor4_@isa@((double*)d_, (double*)k_, (double*)out_,
+                                       ostride / 8, (npy_uintp)nd);
+            }
+            else if (nk == 5) {
+                return vect_cor5_@isa@((double*)d_, (double*)k_, (double*)out_,
+                                       ostride / 8, (npy_uintp)nd);
+            }
+            else if (nk == 7) {
+                return vect_cor7_@isa@((double*)d_, (double*)k_, (double*)out_,
+                                       ostride / 8, (npy_uintp)nd);
+            }
+        }
+/**end repeat**/
+    }
+#endif
 
     switch (dtype) {
 /**begin repeat

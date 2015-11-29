@@ -814,6 +814,7 @@ def configuration(parent_package='',top_path=None):
             join('src', 'multiarray', 'sse2.c.src'),
             join('src', 'multiarray', 'sse3.c.src'),
             join('src', 'multiarray', 'avx.c.src'),
+            join('src', 'multiarray', 'fma.c.src'),
             join('src', 'multiarray', 'sequence.c'),
             join('src', 'multiarray', 'shape.c'),
             join('src', 'multiarray', 'scalarapi.c'),
