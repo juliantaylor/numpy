@@ -1,0 +1,27 @@
+/*
+ * generic sse2 code, enabled by default on amd64
+ * code should be structured to allow inclusion in other isa files when beneficial
+ * e.g. sometimes code profits from the three operand avx instructions or the
+ * compiler may do more optimizations even when the code does not use the full vector
+ * width
+ */
+#define PY_SSIZE_T_CLEAN
+#include "Python.h"
+#include "structmember.h"
+
+#define NPY_NO_DEPRECATED_API NPY_API_VERSION
+#define _MULTIARRAYMODULE
+
+#include "numpy/npy_common.h"
+#include "numpy/arrayobject.h"
+#include "numpy/arrayscalars.h"
+
+#ifdef NPY_HAVE_SSE2_INTRINSICS
+
+#pragma GCC target("sse3")
+
+#define NPY_SSE3 1
+#define NPY_ISA_NAME sse3
+#include "sse2.c"
+
+#endif

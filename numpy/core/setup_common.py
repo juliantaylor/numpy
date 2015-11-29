@@ -129,6 +129,7 @@ OPTIONAL_INTRINSICS = [("__builtin_isnan", '5.'),
                         "xmmintrin.h"),  # SSE
                        ("_mm_load_pd", '(double*)0', "emmintrin.h"),  # SSE2
                        ("__builtin_prefetch", "(float*)0, 0, 3"),
+                       ("__builtin_cpu_supports", '"sse2"'),
                        ]
 
 # function attributes
