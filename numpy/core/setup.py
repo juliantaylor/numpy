@@ -689,6 +689,37 @@ def configuration(parent_package='',top_path=None):
                        sources=npysort_sources,
                        include_dirs=[])
 
+
+    def get_mathlib_info(*args):
+        # Another ugly hack: the mathlib info is known once build_src is run,
+        # but we cannot use add_installed_pkg_config here either, so we only
+        # update the substition dictionary during npymath build
+        config_cmd = config.get_config_cmd()
+
+        # Check that the toolchain works, to fail early if it doesn't
+        # (avoid late errors with MATHLIB which are confusing if the
+        # compiler does not work).
+        st = config_cmd.try_link('int main(void) { return 0;}')
+        if not st:
+            raise RuntimeError("Broken toolchain: cannot link a simple C program")
+        mlibs = check_mathlib(config_cmd)
+
+        posix_mlib = ' '.join(['-l%s' % l for l in mlibs])
+        msvc_mlib = ' '.join(['%s.lib' % l for l in mlibs])
+        subst_dict["posix_mathlib"] = posix_mlib
+        subst_dict["msvc_mathlib"] = msvc_mlib
+
+    npyisa_sources = [(join('src', 'multiarray', 'sse2.c.src'), ["-msse2"]),
+                      (join('src', 'multiarray', 'sse3.c.src'), ["-msse3"]),
+                      (join('src', 'multiarray', 'avx.c.src'), ["-mavx"]),
+                      (join('src', 'multiarray', 'fma.c.src'), ["-mfma"])
+                      ]
+
+    config.add_library('npyisa',
+            sources=npyisa_sources,
+            macros=[("HAVE_NPY_CONFIG_H", "1")]
+            )
+
     #######################################################################
     #                        multiarray module                            #
     #######################################################################
@@ -811,10 +842,6 @@ def configuration(parent_package='',top_path=None):
             join('src', 'multiarray', 'numpymemoryview.c'),
             join('src', 'multiarray', 'numpyos.c'),
             join('src', 'multiarray', 'refcount.c'),
-            join('src', 'multiarray', 'sse2.c.src'),
-            join('src', 'multiarray', 'sse3.c.src'),
-            join('src', 'multiarray', 'avx.c.src'),
-            join('src', 'multiarray', 'fma.c.src'),
             join('src', 'multiarray', 'sequence.c'),
             join('src', 'multiarray', 'shape.c'),
             join('src', 'multiarray', 'scalarapi.c'),
@@ -847,7 +874,7 @@ def configuration(parent_package='',top_path=None):
                                   join(codegen_dir, 'generate_numpy_api.py'),
                                   join('*.py')],
                          depends=deps + multiarray_deps,
-                         libraries=['npymath', 'npysort'],
+                         libraries=['npymath', 'npysort', 'npyisa'],
                          extra_info=extra_info)
 
     #######################################################################

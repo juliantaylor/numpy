@@ -129,6 +129,7 @@ class build_clib(old_build_clib):
         return filenames
 
     def build_libraries(self, libraries):
+        import pdb; pdb.set_trace()
         for (lib_name, build_info) in libraries:
             self.build_a_library(build_info, lib_name, libraries)
 
@@ -214,12 +215,22 @@ class build_clib(old_build_clib):
         objects = []
         if c_sources:
             log.info("compiling C sources")
-            objects = compiler.compile(c_sources,
-                                       output_dir=self.build_temp,
-                                       macros=macros,
-                                       include_dirs=include_dirs,
-                                       debug=self.debug,
-                                       extra_postargs=extra_postargs)
+            import pdb; pdb.set_trace()
+            if (type(c_sources[0]) == tuple):
+                for s, args in c_sources:
+                    objects.append(compiler.compile(c_sources,
+                                               output_dir=self.build_temp,
+                                               macros=macros,
+                                               include_dirs=include_dirs,
+                                               debug=self.debug,
+                                               extra_postargs=extra_postargs + args))
+            else:
+                objects = compiler.compile(c_sources,
+                                           output_dir=self.build_temp,
+                                           macros=macros,
+                                           include_dirs=include_dirs,
+                                           debug=self.debug,
+                                           extra_postargs=extra_postargs)
 
         if cxx_sources:
             log.info("compiling C++ sources")
