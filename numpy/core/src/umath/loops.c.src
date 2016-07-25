@@ -1443,6 +1443,9 @@ TIMEDELTA_mm_d_divide(char **args, npy_intp *dimensions, npy_intp *steps, void *
 #ifdef NPY_HAVE_SSE2_INTRINSICS
 #include <xmmintrin.h>
 #endif
+#ifdef NPY_HAVE_AVX_INTRINSICS
+#include <immintrin.h>
+#endif
 #ifdef NPY_HAVE_AVX2_INTRINSICS
 #include <immintrin.h>
 #endif
@@ -1475,6 +1478,9 @@ NPY_NO_EXPORT void
 #ifdef NPY_HAVE_SSE2_INTRINSICS
 @vtype@ _ZGVbN@vsz@vv_pow@c@(@vtype@, @vtype@);
 #endif
+#ifdef NPY_HAVE_AVX_INTRINSICS
+@vtype2@ _ZGVcN@vsz2@vv_pow@c@(@vtype2@, @vtype2@);
+#endif
 #ifdef NPY_HAVE_AVX2_INTRINSICS
 @vtype2@ _ZGVdN@vsz2@vv_pow@c@(@vtype2@, @vtype2@);
 #endif
@@ -1485,6 +1491,7 @@ NPY_NO_EXPORT void
     /* use vector math functions when there is no aliasing */
     if (
 #if (!defined HAVE__ZGVDN@vsz2@VV_POW@C@ || !defined NPY_HAVE_AVX2_INTRINSICS) && \
+        (!defined HAVE__ZGVCN@vsz2@VV_POW@C@ || !defined NPY_HAVE_AVX_INTRINSICS) && \
         (!defined HAVE__ZGVBN@vsz@VV_POW@C@ || !defined NPY_HAVE_SSE2_INTRINSICS)
         1 ||
 #endif
@@ -1512,6 +1519,11 @@ NPY_NO_EXPORT void
                 @vtype2@ v = _mm256_loadu_p@vsuf@(&ip1[i]);
                 v = _ZGVdN@vsz2@vv_pow@c@(v, vexp);
                 _mm256_storeu_p@vsuf@(&op1[i], v);
+#elif defined HAVE__ZGVCN@vsz2@VV_POW@C@ && defined NPY_HAVE_AVX_INTRINSICS
+                @vtype2@ vexp = _mm256_set1_p@vsuf@(expo);
+                @vtype2@ v = _mm256_loadu_p@vsuf@(&ip1[i]);
+                v = _ZGVcN@vsz2@vv_pow@c@(v, vexp);
+                _mm256_storeu_p@vsuf@(&op1[i], v);
 #elif defined HAVE__ZGVBN@vsz@VV_POW@C@ && defined NPY_HAVE_SSE2_INTRINSICS
                 @vtype@ vexp = _mm_set1_p@vsuf@(expo);
                 @vtype@ v = _mm_loadu_p@vsuf@(&ip1[i]);
@@ -1533,6 +1545,11 @@ NPY_NO_EXPORT void
                 @vtype2@ v = _mm256_loadu_p@vsuf@(&ip1[i]);
                 @vtype2@ vexp = _mm256_loadu_p@vsuf@(&ip2[i]);
                 v = _ZGVdN@vsz2@vv_pow@c@(v, vexp);
+                _mm256_storeu_p@vsuf@(&op1[i], v);
+#elif defined HAVE__ZGVCN@vsz2@VV_POW@C@ && defined NPY_HAVE_AVX_INTRINSICS
+                @vtype2@ v = _mm256_loadu_p@vsuf@(&ip1[i]);
+                @vtype2@ vexp = _mm256_loadu_p@vsuf@(&ip2[i]);
+                v = _ZGVcN@vsz2@vv_pow@c@(v, vexp);
                 _mm256_storeu_p@vsuf@(&op1[i], v);
 #elif defined HAVE__ZGVBN@vsz@VV_POW@C@ && defined NPY_HAVE_SSE2_INTRINSICS
                 @vtype@ vexp = _mm_loadu_p@vsuf@(&ip2[i]);
@@ -1561,6 +1578,9 @@ NPY_NO_EXPORT void
 #ifdef NPY_HAVE_SSE2_INTRINSICS
 @vtype@ _ZGVbN@vsz@v_@f@@c@(@vtype@);
 #endif
+#ifdef NPY_HAVE_AVX_INTRINSICS
+@vtype2@ _ZGVcN@vsz2@v_@f@@c@(@vtype2@);
+#endif
 #ifdef NPY_HAVE_AVX2_INTRINSICS
 @vtype2@ _ZGVdN@vsz2@v_@f@@c@(@vtype2@);
 #endif
@@ -1571,6 +1591,7 @@ NPY_NO_EXPORT void
     /* use vector math functions when there is no aliasing */
     if (
 #if (!defined HAVE__ZGVDN@vsz2@V_@F@@C@ || !defined NPY_HAVE_AVX2_INTRINSICS) && \
+        (!defined HAVE__ZGVCN@vsz2@V_@F@@C@ || !defined NPY_HAVE_AVX_INTRINSICS) && \
         (!defined HAVE__ZGVBN@vsz@V_@F@@C@ || !defined NPY_HAVE_SSE2_INTRINSICS)
         1 ||
 #endif
@@ -1589,6 +1610,10 @@ NPY_NO_EXPORT void
 #if defined HAVE__ZGVDN@vsz2@V_@F@@C@ && defined NPY_HAVE_AVX2_INTRINSICS
             @vtype2@ v = _mm256_loadu_p@vsuf@(&ip1[i]);
             v = _ZGVdN@vsz2@v_@f@@c@(v);
+            _mm256_storeu_p@vsuf@(&op1[i], v);
+#elif defined HAVE__ZGVDN@vsz2@V_@F@@C@ && defined NPY_HAVE_AVX_INTRINSICS
+            @vtype2@ v = _mm256_loadu_p@vsuf@(&ip1[i]);
+            v = _ZGVcN@vsz2@v_@f@@c@(v);
             _mm256_storeu_p@vsuf@(&op1[i], v);
 #elif defined HAVE__ZGVBN@vsz@V_@F@@C@ && defined NPY_HAVE_SSE2_INTRINSICS
             @vtype@ v = _mm_loadu_p@vsuf@(&ip1[i]);
