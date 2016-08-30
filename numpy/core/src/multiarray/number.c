@@ -35,6 +35,8 @@ NPY_NO_EXPORT NumericOps n_ops; /* NB: static objects initialized to zero */
         n_ops.op = temp; \
     }
 
+#define NPY_NUMBER_MAX(a, b) ((a) > (b) ? (a) : (b))
+
 
 /*NUMPY_API
  *Set internal structure with number functions that all arrays will use
@@ -353,23 +355,322 @@ PyArray_GenericInplaceUnaryFunction(PyArrayObject *m1, PyObject *op)
 }
 
 static PyObject *
+array_inplace_add(PyArrayObject *m1, PyObject *m2);
+static PyObject *
+array_inplace_subtract(PyArrayObject *m1, PyObject *m2);
+static PyObject *
+array_inplace_multiply(PyArrayObject *m1, PyObject *m2);
+static PyObject *
+array_inplace_bitwise_and(PyArrayObject *m1, PyObject *m2);
+static PyObject *
+array_inplace_bitwise_or(PyArrayObject *m1, PyObject *m2);
+static PyObject *
+array_inplace_bitwise_xor(PyArrayObject *m1, PyObject *m2);
+static PyObject *
+array_inplace_left_shift(PyArrayObject *m1, PyObject *m2);
+static PyObject *
+array_inplace_right_shift(PyArrayObject *m1, PyObject *m2);
+
+
+/*
+ * helper functions to convert operations to inplace operations when refcount
+ * is 1 and we are called from python
+ * TODO divide can probably be handled with some extra checks (e.g. avoid on
+ * type changes like mm->d)
+ */
+#if defined HAVE_BACKTRACE && HAVE_DLFCN_H
+/* 1 prints elided operations, 2 prints stacktraces */
+#define NPY_ELIDE_DEBUG 0
+#define NPY_MAX_STACKSIZE 1000
+/*
+ * Heuristic number at which backtrace overhead generation becomes less than
+ * speed gain. Depends on stack depth which can be large. Should probably
+ * always be around the L2 cache size.
+ */
+#define NPY_MIN_ELIDE_BYTES 400000
+#include <dlfcn.h>
+#include <execinfo.h>
+
+static int
+check_callers(int * cannot)
+{
+    /*
+     * get base addresses of multiarray, python and libc, check if
+     * backtrace is in these libraries only calling dladdr if a new max address
+     * is found, if after the initial multiarray stack everything is inside
+     * python or libc we can elide as no C-API user could have messed up the
+     * reference counts
+     * approx 35mus overhead for stack size of 100
+     *
+     * TODO some calls go over scalarmath in umath but we cannot get the base
+     * address of it from multiarraymodule as it is not linked against it
+     */
+    static int init = 0;
+    static void * pos_python_start;
+    static void * pos_python_end;
+    static void * pos_ma_start;
+    static void * pos_ma_end;
+    static void * pos_c_start;
+    static void * pos_c_end;
+    void *buffer[NPY_MAX_STACKSIZE];
+    int in_prolog_numpy = 1;
+    int ok = 1;
+    int i, nptrs;
+    Dl_info info;
+    /* cannot determine callers */
+    if (init == -1) {
+        *cannot = 1;
+        return 0;
+    }
+
+    nptrs = backtrace(buffer, NPY_MAX_STACKSIZE);
+    if (nptrs == NPY_MAX_STACKSIZE) {
+        /* couldn't restore full stack, bail */
+        *cannot = 1;
+        return 0;
+    }
+    else if (nptrs == 0) {
+        /* complete failure, disable elision */
+        init = -1;
+        *cannot = 1;
+        return 0;
+    }
+
+    if (NPY_UNLIKELY(init == 0)) {
+        /* get python base address */
+        if (dladdr(&PyNumber_Or, &info)) {
+            pos_python_start = info.dli_fbase;
+            pos_python_end = info.dli_fbase;
+        }
+        else {
+            init = -1;
+            return 0;
+        }
+        /* get multiarray base address */
+        if (dladdr(&PyArray_SetNumericOps, &info)) {
+            pos_ma_start = info.dli_fbase;
+            pos_ma_end = info.dli_fbase;
+        }
+        else {
+            init = -1;
+            return 0;
+        }
+        /* get c base address */
+        if (dladdr(&strcmp, &info)) {
+            pos_c_start = info.dli_fbase;
+            pos_c_end = info.dli_fbase;
+        }
+        else {
+            init = -1;
+            return 0;
+        }
+        init = 1;
+    }
+
+    for (i = 0; i < nptrs; i++) {
+        int in_python = 0;
+        int in_multiarray = 0;
+        int in_c = 0;
+#if NPY_ELIDE_DEBUG == 2
+        dladdr(buffer[i], &info);
+        printf("%s(%p) %s(%p)\n", info.dli_fname, info.dli_fbase,
+               info.dli_sname, info.dli_saddr);
+#endif
+        /* check stored boundaries first */
+        if (buffer[i] >= pos_python_start && buffer[i] <= pos_python_end) {
+            in_python = 1;
+        }
+        else if (buffer[i] >= pos_ma_start && buffer[i] <= pos_ma_end) {
+            in_multiarray = 1;
+        }
+        else if (buffer[i] >= pos_c_start && buffer[i] <= pos_c_end) {
+            in_c = 1;
+        }
+
+        /* new address, get base object */
+        if (!in_python && !in_multiarray && !in_c) {
+            if (dladdr(buffer[i], &info) == 0) {
+                init = -1;
+                ok = 0;
+                break;
+            }
+            /* new good function, store new end */
+            if (info.dli_fbase == pos_python_start) {
+                pos_python_end = NPY_NUMBER_MAX(buffer[i], pos_python_end);
+                in_python = 1;
+            }
+            else if (info.dli_fbase == pos_ma_start) {
+                pos_ma_end = NPY_NUMBER_MAX(buffer[i], pos_ma_end);
+                in_multiarray = 1;
+            }
+            else if (info.dli_fbase == pos_c_start) {
+                pos_c_end = NPY_NUMBER_MAX(buffer[i], pos_c_end);
+                in_c = 1;
+            }
+        }
+        /* have we left stack inside numpy? */
+        if (in_prolog_numpy && (!in_multiarray)) {
+            in_prolog_numpy = 0;
+        }
+        /* if outside initial numpy code only python and C functions are ok */
+        if (!in_prolog_numpy) {
+            if (!in_python && !in_c) {
+                ok = 0;
+                break;
+            }
+        }
+    }
+
+    /* all stacks after numpy are from python or C, we can elide */
+    if (ok) {
+        *cannot = 0;
+        return 1;
+    }
+    else {
+#if NPY_ELIDE_DEBUG != 0
+        puts("cannot elide due to c-api usage");
+#endif
+        *cannot = 1;
+        return 0;
+    }
+}
+
+/*
+ * check if m1 is a temporary (refcnt == 1) so we can do inplace operations
+ * instead of creating a new temporary
+ * cannot is set to true if it cannot be done even with swapped arguments
+ */
+static int
+can_elide_temp(PyArrayObject * m1, PyObject * m2, int * cannot)
+{
+    int i;
+    if (Py_REFCNT(m1) != 1 || !PyArray_CheckExact(m1) ||
+            PyArray_DESCR(m1)->type_num == NPY_VOID ||
+            !(PyArray_FLAGS(m1) & NPY_ARRAY_OWNDATA) ||
+            PyArray_NBYTES(m1) < NPY_MIN_ELIDE_BYTES) {
+        return 0;
+    }
+    if (PyArray_CheckExact(m2) &&
+            PyArray_DESCR(m1)->type_num ==
+            PyArray_DESCR((PyArrayObject *)m2)->type_num &&
+            PyArray_NDIM(m1) == PyArray_NDIM((PyArrayObject *)m2)) {
+        for (i = 0; i < PyArray_NDIM((PyArrayObject *)m2); i++) {
+            if (PyArray_DIM(m1, i) != PyArray_DIM((PyArrayObject *)m2, i) ||
+                    PyArray_STRIDE(m1, i) !=
+                    PyArray_STRIDE((PyArrayObject *)m2, i)) {
+                return 0;
+            }
+        }
+        return check_callers(cannot);
+    }
+    else if (PyArray_DESCR(m1)->type_num == NPY_DOUBLE &&
+             (PyFloat_CheckExact(m2) ||
+              PyArray_IsScalar((PyArrayObject *)m2, Double))) {
+        /*
+         * scalar op temporary
+         * TODO there are probably more cases one can check here
+         */
+        return check_callers(cannot);
+    }
+    return 0;
+}
+
+/*
+ * try eliding a binary op, if commutative is true also try swapped arguments
+ */
+static int
+try_binary_elide(PyArrayObject * m1, PyObject * m2,
+                 PyObject * (inplace_op)(PyArrayObject * m1, PyObject * m2),
+                 PyObject ** res, int commutative)
+{
+    /* set when no elision can be done independent of argument order */
+    int cannot = 0;
+    if (can_elide_temp(m1, m2, &cannot)) {
+        *res = inplace_op(m1, m2);
+#if NPY_ELIDE_DEBUG != 0
+        puts("elided temporary in binary op");
+#endif
+        return 1;
+    }
+    else if (commutative && !cannot) {
+        if (can_elide_temp((PyArrayObject *)m2, (PyObject *)m1, &cannot)) {
+            *res = inplace_op((PyArrayObject *)m2, (PyObject *)m1);
+#if NPY_ELIDE_DEBUG != 0
+        puts("elided temporary in commutative binary op");
+#endif
+            return 1;
+        }
+    }
+    *res = NULL;
+    return 0;
+}
+
+/* try elide unary temporary */
+static int can_elide_temp_unary(PyArrayObject * m1)
+{
+    int cannot;
+    if (Py_REFCNT(m1) != 1 || !PyArray_CheckExact(m1) ||
+            PyArray_DESCR(m1)->type_num == NPY_VOID ||
+            !(PyArray_FLAGS(m1) & NPY_ARRAY_OWNDATA) ||
+            PyArray_NBYTES(m1) < NPY_MIN_ELIDE_BYTES) {
+        return 0;
+    }
+    if (check_callers(&cannot)) {
+#if NPY_ELIDE_DEBUG != 0
+        puts("elided temporary in unary op");
+#endif
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+#else
+static int can_elide_temp_unary(PyArrayObject * m1)
+{
+    return 0;
+}
+
+static int
+try_binary_elide(PyArrayObject * m1, PyObject * m2,
+                 PyObject * (inplace_op)(PyArrayObject * m1, PyObject * m2),
+                 PyObject ** res, int commutative)
+{
+    return 0;
+}
+#endif
+
+
+static PyObject *
 array_add(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__add__", "__radd__", 0, nb_add);
+    if (try_binary_elide(m1, m2, &array_inplace_add, &res, 1)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.add);
 }
 
 static PyObject *
 array_subtract(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__sub__", "__rsub__", 0, nb_subtract);
+    if (try_binary_elide(m1, m2, &array_inplace_subtract, &res, 0)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.subtract);
 }
 
 static PyObject *
 array_multiply(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__mul__", "__rmul__", 0, nb_multiply);
+    if (try_binary_elide(m1, m2, &array_inplace_multiply, &res, 1)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.multiply);
 }
 
@@ -529,7 +830,7 @@ fast_scalar_power(PyArrayObject *a1, PyObject *o2, int inplace)
                 return NULL;
             }
 
-            if (inplace) {
+            if (inplace || can_elide_temp_unary(a1)) {
                 return PyArray_GenericInplaceUnaryFunction(a1, fastop);
             } else {
                 return PyArray_GenericUnaryFunction(a1, fastop);
@@ -588,53 +889,82 @@ array_power(PyArrayObject *a1, PyObject *o2, PyObject *NPY_UNUSED(modulo))
 static PyObject *
 array_negative(PyArrayObject *m1)
 {
+    if (can_elide_temp_unary(m1)) {
+        return PyArray_GenericInplaceUnaryFunction(m1, n_ops.negative);
+    }
     return PyArray_GenericUnaryFunction(m1, n_ops.negative);
 }
 
 static PyObject *
 array_absolute(PyArrayObject *m1)
 {
+    if (can_elide_temp_unary(m1)) {
+        return PyArray_GenericInplaceUnaryFunction(m1, n_ops.absolute);
+    }
     return PyArray_GenericUnaryFunction(m1, n_ops.absolute);
 }
 
 static PyObject *
 array_invert(PyArrayObject *m1)
 {
+    if (can_elide_temp_unary(m1)) {
+        return PyArray_GenericInplaceUnaryFunction(m1, n_ops.invert);
+    }
     return PyArray_GenericUnaryFunction(m1, n_ops.invert);
 }
 
 static PyObject *
 array_left_shift(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__lshift__", "__rlshift__", 0, nb_lshift);
+    if (try_binary_elide(m1, m2, &array_inplace_left_shift, &res, 0)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.left_shift);
 }
 
 static PyObject *
 array_right_shift(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__rshift__", "__rrshift__", 0, nb_rshift);
+    if (try_binary_elide(m1, m2, &array_inplace_right_shift, &res, 0)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.right_shift);
 }
 
 static PyObject *
 array_bitwise_and(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__and__", "__rand__", 0, nb_and);
+    if (try_binary_elide(m1, m2, &array_inplace_bitwise_and, &res, 1)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.bitwise_and);
 }
 
 static PyObject *
 array_bitwise_or(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__or__", "__ror__", 0, nb_or);
+    if (try_binary_elide(m1, m2, &array_inplace_bitwise_or, &res, 1)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.bitwise_or);
 }
 
 static PyObject *
 array_bitwise_xor(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__xor__", "__rxor__", 0, nb_xor);
+    if (try_binary_elide(m1, m2, &array_inplace_bitwise_xor, &res, 1)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.bitwise_xor);
 }
 

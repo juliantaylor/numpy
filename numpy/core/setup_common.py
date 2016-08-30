@@ -105,7 +105,8 @@ MANDATORY_FUNCS = ["sin", "cos", "tan", "sinh", "cosh", "tanh", "fabs",
 OPTIONAL_STDFUNCS = ["expm1", "log1p", "acosh", "asinh", "atanh",
         "rint", "trunc", "exp2", "log2", "hypot", "atan2", "pow",
         "copysign", "nextafter", "ftello", "fseeko",
-        "strtoll", "strtoull", "cbrt", "strtold_l", "fallocate"]
+        "strtoll", "strtoull", "cbrt", "strtold_l", "fallocate",
+        "backtrace"]
 
 
 OPTIONAL_HEADERS = [
@@ -113,6 +114,7 @@ OPTIONAL_HEADERS = [
                 "xmmintrin.h",  # SSE
                 "emmintrin.h",  # SSE2
                 "features.h",  # for glibc version linux
+                "dlfcn.h", # dladdr
 ]
 
 # optional gcc compiler builtins and their call arguments and optional a
