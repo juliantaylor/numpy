@@ -2693,6 +2693,19 @@ class TestBinop(object):
         assert_array_equal(l[4], np.ones(100000))
         assert_array_equal(res, l[4] + l[4])
 
+    def test_temporary_with_cast(self):
+        # check that we don't elide into a temporary which would need casting
+        d = np.ones(100000, dtype=np.int64)
+        assert_equal(((d + d) + 2**222).dtype, np.dtype('O'))
+
+        # commutative elision into the astype result
+        f = np.ones(100000, dtype=np.float32)
+        assert_equal(((f + f) + f.astype(np.float64)).dtype, np.dtype('f8'))
+
+        # no elision into f + f
+        d = f.astype(np.float64)
+        assert_equal(((f + f) + d).dtype, np.dtype('f8'))
+
     def test_ufunc_override_rop_precedence(self):
         # 2016-01-29: NUMPY_UFUNC_DISABLED
         return

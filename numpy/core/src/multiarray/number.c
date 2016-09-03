@@ -471,7 +471,7 @@ check_callers(int * cannot)
         int in_python = 0;
         int in_multiarray = 0;
         int in_c = 0;
-#if NPY_ELIDE_DEBUG == 2
+#if NPY_ELIDE_DEBUG >= 2
         dladdr(buffer[i], &info);
         printf("%s(%p) %s(%p)\n", info.dli_fname, info.dli_fbase,
                info.dli_sname, info.dli_saddr);
@@ -536,42 +536,59 @@ check_callers(int * cannot)
 }
 
 /*
- * check if m1 is a temporary (refcnt == 1) so we can do inplace operations
- * instead of creating a new temporary
- * cannot is set to true if it cannot be done even with swapped arguments
+ * check if in "alhs @op@ orhs" that alhs is a temporary (refcnt == 1) so we
+ * can do inplace operations instead of creating a new temporary
+ * "cannot" is set to true if it cannot be done even with swapped arguments
  */
 static int
-can_elide_temp(PyArrayObject * m1, PyObject * m2, int * cannot)
+can_elide_temp(PyArrayObject * alhs, PyObject * orhs, int * cannot)
 {
-    int i;
-    if (Py_REFCNT(m1) != 1 || !PyArray_CheckExact(m1) ||
-            PyArray_DESCR(m1)->type_num == NPY_VOID ||
-            !(PyArray_FLAGS(m1) & NPY_ARRAY_OWNDATA) ||
-            PyArray_NBYTES(m1) < NPY_MIN_ELIDE_BYTES) {
+    if (Py_REFCNT(alhs) != 1 || !PyArray_CheckExact(alhs) ||
+            PyArray_DESCR(alhs)->type_num == NPY_VOID ||
+            !(PyArray_FLAGS(alhs) & NPY_ARRAY_OWNDATA) ||
+            PyArray_NBYTES(alhs) < NPY_MIN_ELIDE_BYTES) {
         return 0;
     }
-    if (PyArray_CheckExact(m2) &&
-            PyArray_DESCR(m1)->type_num ==
-            PyArray_DESCR((PyArrayObject *)m2)->type_num &&
-            PyArray_NDIM(m1) == PyArray_NDIM((PyArrayObject *)m2)) {
-        for (i = 0; i < PyArray_NDIM((PyArrayObject *)m2); i++) {
-            if (PyArray_DIM(m1, i) != PyArray_DIM((PyArrayObject *)m2, i) ||
-                    PyArray_STRIDE(m1, i) !=
-                    PyArray_STRIDE((PyArrayObject *)m2, i)) {
-                return 0;
+    if (PyArray_CheckExact(orhs) ||
+        PyArray_CheckAnyScalar(orhs)) {
+        PyArrayObject * arhs;
+
+        /* create array from right hand side */
+        Py_INCREF(orhs);
+        arhs = (PyArrayObject *)PyArray_EnsureArray(orhs);
+        if (arhs == NULL) {
+            return 0;
+        }
+
+        /* too large to fit into left hand side */
+        if (PyArray_NDIM(arhs) > PyArray_NDIM(alhs)) {
+            Py_DECREF(arhs);
+            return 0;
+        }
+
+        /*
+         * if rhs is not a scalar dimensions must match
+         * todo: one could allow full broadcasting on equal types
+         */
+        if (PyArray_NDIM(arhs) > 0) {
+            int i;
+            for (i = 0; i < PyArray_NDIM(arhs); i++) {
+                if (PyArray_DIM(alhs, i) != PyArray_DIM(arhs, i)) {
+                    Py_DECREF(arhs);
+                    return 0;
+                }
             }
         }
-        return check_callers(cannot);
+
+        /* must be safe to cast (checks values for scalar in rhs) */
+        if (PyArray_CanCastArrayTo(arhs, PyArray_DESCR(alhs),
+                                   NPY_SAFE_CASTING)) {
+            Py_DECREF(arhs);
+            return check_callers(cannot);
+        }
+        Py_DECREF(arhs);
     }
-    else if (PyArray_DESCR(m1)->type_num == NPY_DOUBLE &&
-             (PyFloat_CheckExact(m2) ||
-              PyArray_IsScalar((PyArrayObject *)m2, Double))) {
-        /*
-         * scalar op temporary
-         * TODO there are probably more cases one can check here
-         */
-        return check_callers(cannot);
-    }
+
     return 0;
 }
 
