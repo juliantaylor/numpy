@@ -412,6 +412,7 @@ check_callers(int * cannot)
     static void * pos_ma_end;
     static void * pos_c_start;
     static void * pos_c_end;
+    static void * pos_pymain;
     void *buffer[NPY_MAX_STACKSIZE];
     int in_prolog_numpy = 1;
     int ok = 1;
@@ -455,6 +456,19 @@ check_callers(int * cannot)
             init = -1;
             return 0;
         }
+        /* Py_Main address, needed when libpython is not static in python */
+        for (i = nptrs - 1; i >= 0; i--) {
+            if (dladdr(buffer[i], &info)) {
+                if (info.dli_sname && strcmp(info.dli_sname, "Py_Main") == 0) {
+                    pos_pymain = buffer[i];
+                    break;
+                }
+            }
+        }
+        if (i == 0) {
+            init = -1;
+            return 0;
+        }
         /* get c base address */
         if (dladdr(&strcmp, &info)) {
             pos_c_start = info.dli_fbase;
@@ -476,6 +490,11 @@ check_callers(int * cannot)
         printf("%s(%p) %s(%p)\n", info.dli_fname, info.dli_fbase,
                info.dli_sname, info.dli_saddr);
 #endif
+        /* we reached python main entry point, done */
+        if (buffer[i] == pos_pymain) {
+            break;
+        }
+
         /* check stored boundaries first */
         if (buffer[i] >= pos_python_start && buffer[i] <= pos_python_end) {
             in_python = 1;
