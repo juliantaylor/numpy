@@ -589,14 +589,11 @@ can_elide_temp(PyArrayObject * alhs, PyObject * orhs, int * cannot)
          * if rhs is not a scalar dimensions must match
          * todo: one could allow full broadcasting on equal types
          */
-        if (PyArray_NDIM(arhs) > 0) {
-            int i;
-            for (i = 0; i < PyArray_NDIM(arhs); i++) {
-                if (PyArray_DIM(alhs, i) != PyArray_DIM(arhs, i)) {
-                    Py_DECREF(arhs);
-                    return 0;
-                }
-            }
+        if (PyArray_NDIM(arhs) > 0 &&
+            !PyArray_CompareLists(PyArray_DIMS(alhs), PyArray_DIMS(arhs),
+                                 PyArray_NDIM(arhs))) {
+                Py_DECREF(arhs);
+                return 0;
         }
 
         /* must be safe to cast (checks values for scalar in rhs) */
