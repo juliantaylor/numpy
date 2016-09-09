@@ -1,0 +1,58 @@
+# ipython --profile=null check.ipy
+import timeit
+import sys
+
+import numpy as np
+import os
+print np
+lsize = []
+lratio = []
+lelide_time = []
+lnoelide_time = []
+for x in range(32, 256, 8) + range(256, 512, 16) + range(512, 2048, 128) + range(2048, 16384, 1024):
+    print x, 'KiB'
+    x *= 1024
+    sd = x // 8
+
+    d = np.ones(sd, dtype=np.float64)
+    os.environ["NPY_FORCE_ELIDE"] = "1"
+
+    dt_elide = %timeit -o d+d+d
+    #dt_elide = %timeit -o (d+1.)+1.
+
+    del os.environ["NPY_FORCE_ELIDE"]
+
+    dt_noelide = %timeit -o d+d+d
+    #dt_noelide = %timeit -o (d+1.)+1.
+
+    dt_elide = dt_elide.best
+    dt_noelide = dt_noelide.best
+
+    print 'double   elide: %.2g' % dt_elide
+    print 'double noelide: %.2g' % dt_noelide
+    
+    rd = dt_noelide / dt_elide
+    if rd > 1.2:
+        print 'dt profitable', rd
+
+    lsize.append(x / 1024.)
+    lratio.append(rd)
+    lelide_time.append(dt_elide)
+    lnoelide_time.append(dt_noelide)
+
+import matplotlib.pylab as plt
+
+for i in range(len(lsize)):
+    print lsize[i], lratio[i], lelide_time[i], lnoelide_time[i]
+
+f = plt.figure()
+ax = f.add_subplot(111)
+ax.plot(lsize, lratio, '-o', label='double')
+ax.legend()
+
+f = plt.figure()
+ax = f.add_subplot(111)
+ax.plot(lsize, lelide_time, '-o', label='elide')
+ax.plot(lsize, lnoelide_time, '-o', label='noelide')
+ax.legend()
+plt.show()

@@ -584,10 +584,16 @@ check_callers(int * cannot)
 static int
 can_elide_temp(PyArrayObject * alhs, PyObject * orhs, int * cannot)
 {
+    char * force_elide = getenv("NPY_FORCE_ELIDE");
+    force_elide = force_elide ? *force_elide == '1' : NULL;
+    if (!force_elide) {
+        *cannot = 1;
+        return 0;
+    }
     if (Py_REFCNT(alhs) != 1 || !PyArray_CheckExact(alhs) ||
             PyArray_DESCR(alhs)->type_num == NPY_VOID ||
             !(PyArray_FLAGS(alhs) & NPY_ARRAY_OWNDATA) ||
-            PyArray_NBYTES(alhs) < NPY_MIN_ELIDE_BYTES) {
+            (PyArray_NBYTES(alhs) < NPY_MIN_ELIDE_BYTES && !force_elide)) {
         return 0;
     }
     if (PyArray_CheckExact(orhs) ||
