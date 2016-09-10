@@ -381,43 +381,70 @@ array_inplace_right_shift(PyArrayObject *m1, PyObject *m2);
 #if defined HAVE_BACKTRACE && HAVE_DLFCN_H
 /* 1 prints elided operations, 2 prints stacktraces */
 #define NPY_ELIDE_DEBUG 0
-#define NPY_MAX_STACKSIZE 1000
+#define NPY_MAX_STACKSIZE 10
+
+#if PY_VERSION_HEX >= 0x03060000
+/* TODO pep523 method could be used to skip all the backtrace checks */
+#define PYFRAMEEVAL_FUNC "_PyEval_EvalFrameDefault"
+#else
+#define PYFRAMEEVAL_FUNC "PyEval_EvalFrameEx"
+#endif
 /*
  * Heuristic number at which backtrace overhead generation becomes less than
- * speed gain. Depends on stack depth which can be large. Should probably
- * always be around the L2 cache size.
+ * speed gain. Depends on stack depth being checked.
+ * Measurements with 10 stacks show it getting worthwhile around 100KiB but to
+ * be conservative put it higher around where the L2 cache spills.
  */
-#define NPY_MIN_ELIDE_BYTES 400000
+#define NPY_MIN_ELIDE_BYTES (160 * 1024)
 #include <dlfcn.h>
 #include <execinfo.h>
+
+/*
+ * linear search pointer in table
+ * number of pointers is usually quite small but if a performance impact can be
+ * measured this could be converted to a binary search
+ */
+static int
+find_addr(void * addresses[], npy_intp naddr, void * addr)
+{
+    npy_intp j;
+    for (j = 0; j < naddr; j++) {
+        if (addr == addresses[j]) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 static int
 check_callers(int * cannot)
 {
     /*
-     * get base addresses of multiarray, python and libc, check if
+     * get base addresses of multiarray, python, check if
      * backtrace is in these libraries only calling dladdr if a new max address
      * is found, if after the initial multiarray stack everything is inside
      * python or libc we can elide as no C-API user could have messed up the
      * reference counts
-     * approx 35mus overhead for stack size of 100
+     * Only check until the python frame evaluation function is found
+     * approx 10us overhead for stack size of 10
      *
      * TODO some calls go over scalarmath in umath but we cannot get the base
      * address of it from multiarraymodule as it is not linked against it
      */
     static int init = 0;
+    /* measured DSO object memory start and end */
     static void * pos_python_start;
     static void * pos_python_end;
     static void * pos_ma_start;
     static void * pos_ma_end;
-    static void * pos_c_start;
-    static void * pos_c_end;
-    static void * pos_pymain;
+    /* known address storage to save dladdr calls */
+    static void * py_addr[64];
+    static void * pyeval_addr[64];
+    static npy_intp npy_addr = 0;
+    static npy_intp npyeval = 0;
     void *buffer[NPY_MAX_STACKSIZE];
-    int in_prolog_numpy = 1;
-    int ok = 1;
     int i, nptrs;
-    Dl_info info;
+    int ok = 0;
     /* cannot determine callers */
     if (init == -1) {
         *cannot = 1;
@@ -425,19 +452,16 @@ check_callers(int * cannot)
     }
 
     nptrs = backtrace(buffer, NPY_MAX_STACKSIZE);
-    if (nptrs == NPY_MAX_STACKSIZE) {
-        /* couldn't restore full stack, bail */
-        *cannot = 1;
-        return 0;
-    }
-    else if (nptrs == 0) {
+    if (nptrs == 0) {
         /* complete failure, disable elision */
         init = -1;
         *cannot = 1;
         return 0;
     }
 
+    /* setup DSO base addresses, ends updated later */
     if (NPY_UNLIKELY(init == 0)) {
+        Dl_info info;
         /* get python base address */
         if (dladdr(&PyNumber_Or, &info)) {
             pos_python_start = info.dli_fbase;
@@ -456,64 +480,35 @@ check_callers(int * cannot)
             init = -1;
             return 0;
         }
-        /* Py_Main address, needed when libpython is not static in python */
-        for (i = nptrs - 1; i >= 0; i--) {
-            if (dladdr(buffer[i], &info)) {
-                if (info.dli_sname && strcmp(info.dli_sname, "Py_Main") == 0) {
-                    pos_pymain = buffer[i];
-                    break;
-                }
-            }
-        }
-        if (i == 0) {
-            init = -1;
-            return 0;
-        }
-        /* get c base address */
-        if (dladdr(&strcmp, &info)) {
-            pos_c_start = info.dli_fbase;
-            pos_c_end = info.dli_fbase;
-        }
-        else {
-            init = -1;
-            return 0;
-        }
         init = 1;
     }
 
     for (i = 0; i < nptrs; i++) {
+        Dl_info info;
         int in_python = 0;
         int in_multiarray = 0;
-        int in_c = 0;
 #if NPY_ELIDE_DEBUG >= 2
         dladdr(buffer[i], &info);
         printf("%s(%p) %s(%p)\n", info.dli_fname, info.dli_fbase,
                info.dli_sname, info.dli_saddr);
 #endif
-        /* we reached python main entry point, done */
-        if (buffer[i] == pos_pymain) {
-            break;
-        }
 
-        /* check stored boundaries first */
+        /* check stored DSO boundaries first */
         if (buffer[i] >= pos_python_start && buffer[i] <= pos_python_end) {
             in_python = 1;
         }
         else if (buffer[i] >= pos_ma_start && buffer[i] <= pos_ma_end) {
             in_multiarray = 1;
         }
-        else if (buffer[i] >= pos_c_start && buffer[i] <= pos_c_end) {
-            in_c = 1;
-        }
 
-        /* new address, get base object */
-        if (!in_python && !in_multiarray && !in_c) {
+        /* update DSO boundaries via dladdr if necessary */
+        if (!in_python && !in_multiarray) {
             if (dladdr(buffer[i], &info) == 0) {
                 init = -1;
                 ok = 0;
                 break;
             }
-            /* new good function, store new end */
+            /* update DSO end */
             if (info.dli_fbase == pos_python_start) {
                 pos_python_end = NPY_NUMBER_MAX(buffer[i], pos_python_end);
                 in_python = 1;
@@ -522,25 +517,52 @@ check_callers(int * cannot)
                 pos_ma_end = NPY_NUMBER_MAX(buffer[i], pos_ma_end);
                 in_multiarray = 1;
             }
-            else if (info.dli_fbase == pos_c_start) {
-                pos_c_end = NPY_NUMBER_MAX(buffer[i], pos_c_end);
-                in_c = 1;
+        }
+
+        /* left ok libraries and not reached PyEval -> no elide */
+        if (!in_python && !in_multiarray) {
+            ok = 0;
+            break;
+        }
+
+        /* in python check if the frame eval function was reached */
+        if (in_python) {
+            /* if reached eval we are done */
+            if (find_addr(pyeval_addr, npyeval, buffer[i])) {
+                ok = 1;
+                break;
             }
-        }
-        /* have we left stack inside numpy? */
-        if (in_prolog_numpy && (!in_multiarray)) {
-            in_prolog_numpy = 0;
-        }
-        /* if outside initial numpy code only python and C functions are ok */
-        if (!in_prolog_numpy) {
-            if (!in_python && !in_c) {
+            /*
+             * check if its some other function, use pointer lookup table to
+             * save expensive dladdr calls
+             */
+            if (find_addr(py_addr, npy_addr, buffer[i])) {
+                continue;
+            }
+
+            /* new python address, check for PyEvalFrame */
+            if (dladdr(buffer[i], &info) == 0) {
+                init = -1;
                 ok = 0;
                 break;
+            }
+            if (info.dli_sname &&
+                    strcmp(info.dli_sname, PYFRAMEEVAL_FUNC) == 0) {
+                if (npyeval < sizeof(pyeval_addr) / sizeof(pyeval_addr[0])) {
+                    /* store address to not have to dladdr it again */
+                    pyeval_addr[npyeval++] = buffer[i];
+                }
+                ok = 1;
+                break;
+            }
+            else if (npy_addr < sizeof(py_addr) / sizeof(py_addr[0])) {
+                /* store other py function to not have to dladdr it again */
+                py_addr[npy_addr++] = buffer[i];
             }
         }
     }
 
-    /* all stacks after numpy are from python or C, we can elide */
+    /* all stacks after numpy are from python, we can elide */
     if (ok) {
         *cannot = 0;
         return 1;
