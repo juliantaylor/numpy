@@ -378,7 +378,7 @@ array_inplace_right_shift(PyArrayObject *m1, PyObject *m2);
  * TODO divide can probably be handled with some extra checks (e.g. avoid on
  * type changes like mm->d)
  */
-#if defined HAVE_BACKTRACE && HAVE_DLFCN_H
+#if defined HAVE_BACKTRACE && HAVE_DLFCN_H && ! defined PYPY_VERSION
 /* 1 prints elided operations, 2 prints stacktraces */
 #define NPY_ELIDE_DEBUG 0
 #define NPY_MAX_STACKSIZE 10
