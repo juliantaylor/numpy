@@ -3982,23 +3982,7 @@ def _median(a, axis=None, out=None, overwrite_input=False):
     if np.issubdtype(a.dtype, np.inexact) and sz > 0:
         # warn and return nans like mean would
         rout = mean(part[indexer], axis=axis, out=out)
-        part = np.rollaxis(part, axis, part.ndim)
-        n = np.isnan(part[..., -1])
-        if rout.ndim == 0:
-            if n == True:
-                warnings.warn("Invalid value encountered in median",
-                              RuntimeWarning, stacklevel=3)
-                if out is not None:
-                    out[...] = a.dtype.type(np.nan)
-                    rout = out
-                else:
-                    rout = a.dtype.type(np.nan)
-        elif np.count_nonzero(n.ravel()) > 0:
-            warnings.warn("Invalid value encountered in median for" +
-                          " %d results" % np.count_nonzero(n.ravel()),
-                          RuntimeWarning, stacklevel=3)
-            rout[n] = np.nan
-        return rout
+        return _median_nancheck(part, rout, axis, out)
     else:
         # if there are no nans
         # Use mean in odd and even case to coerce data type
@@ -4126,6 +4110,24 @@ def percentile(a, q, axis=None, out=None,
     else:
         return r
 
+def _median_nancheck(data, result, axis, out):
+    data = np.rollaxis(data, axis, data.ndim)
+    n = np.isnan(data[..., -1])
+    if result.ndim == 0:
+        if n == True:
+            warnings.warn("Invalid value encountered in median",
+                          RuntimeWarning, stacklevel=3)
+            if out is not None:
+                out[...] = data.dtype.type(np.nan)
+                result = out
+            else:
+                result = data.dtype.type(np.nan)
+    elif np.count_nonzero(n.ravel()) > 0:
+        warnings.warn("Invalid value encountered in median for" +
+                      " %d results" % np.count_nonzero(n.ravel()),
+                      RuntimeWarning, stacklevel=3)
+        result[n] = np.nan
+    return result
 
 def _percentile(a, q, axis=None, out=None,
                 overwrite_input=False, interpolation='linear', keepdims=False):
