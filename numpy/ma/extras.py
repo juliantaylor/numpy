@@ -699,15 +699,19 @@ def median(a, axis=None, out=None, overwrite_input=False, keepdims=False):
         return r
 
 def _median(a, axis=None, out=None, overwrite_input=False):
+    if np.issubdtype(a.dtype, np.inexact):
+        fill_value = np.inf
+    else:
+        fill_value = None
     if overwrite_input:
         if axis is None:
             asorted = a.ravel()
-            asorted.sort()
+            asorted.sort(fill_value=None)
         else:
-            a.sort(axis=axis)
+            a.sort(axis=axis, fill_value=None)
             asorted = a
     else:
-        asorted = sort(a, axis=axis)
+        asorted = sort(a, axis=axis, fill_value=None)
 
     if axis is None:
         axis = 0
@@ -716,7 +720,19 @@ def _median(a, axis=None, out=None, overwrite_input=False):
 
     if asorted.ndim == 1:
         idx, odd = divmod(count(asorted), 2)
-        return asorted[idx + odd - 1 : idx + 1].mean(out=out)
+        rout = asorted[idx + odd - 1 : idx + 1].mean(out=out)
+        return np.lib.function_base._median_nancheck(asorted, rout, axis, out)
+        n = np.isnan(asorted[-1])
+        if n == True:
+            warnings.warn("Invalid value encountered in median",
+                          RuntimeWarning, stacklevel=3)
+            if out is not None:
+                out[...] = a.dtype.type(np.nan)
+                rout = out
+            else:
+                rout = a.dtype.type(np.nan)
+        return rout
+
 
     counts = count(asorted, axis=axis)
     h = counts // 2
@@ -743,6 +759,8 @@ def _median(a, axis=None, out=None, overwrite_input=False):
         # avoid inf / x = masked
         s = np.ma.sum([low, high], axis=0, out=out)
         np.true_divide(s.data, 2., casting='unsafe', out=s.data)
+
+        s = np.lib.function_base._median_nancheck(asorted, s, axis, out)
     else:
         s = np.ma.mean([low, high], axis=0, out=out)
     return s
