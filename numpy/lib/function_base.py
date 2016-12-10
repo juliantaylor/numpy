@@ -4113,6 +4113,10 @@ def percentile(a, q, axis=None, out=None,
 def _median_nancheck(data, result, axis, out):
     data = np.rollaxis(data, axis, data.ndim)
     n = np.isnan(data[..., -1])
+    try:
+        n = n.filled(False)
+    except:
+        pass
     if result.ndim == 0:
         if n == True:
             warnings.warn("Invalid value encountered in median",
