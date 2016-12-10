@@ -4111,6 +4111,8 @@ def percentile(a, q, axis=None, out=None,
         return r
 
 def _median_nancheck(data, result, axis, out):
+    if data.size == 0:
+        return result
     data = np.rollaxis(data, axis, data.ndim)
     n = np.isnan(data[..., -1])
     try:
