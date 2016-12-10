@@ -722,17 +722,6 @@ def _median(a, axis=None, out=None, overwrite_input=False):
         idx, odd = divmod(count(asorted), 2)
         rout = asorted[idx + odd - 1 : idx + 1].mean(out=out)
         return np.lib.function_base._median_nancheck(asorted, rout, axis, out)
-        n = np.isnan(asorted[-1])
-        if n == True:
-            warnings.warn("Invalid value encountered in median",
-                          RuntimeWarning, stacklevel=3)
-            if out is not None:
-                out[...] = a.dtype.type(np.nan)
-                rout = out
-            else:
-                rout = a.dtype.type(np.nan)
-        return rout
-
 
     counts = count(asorted, axis=axis)
     h = counts // 2
@@ -750,10 +739,7 @@ def _median(a, axis=None, out=None, overwrite_input=False):
 
     # duplicate high if odd number of elements so mean does nothing
     odd = counts % 2 == 1
-    if asorted.ndim > 1:
-        np.copyto(low, high, where=odd)
-    elif odd:
-        low = high
+    np.copyto(low, high, where=odd)
 
     if np.issubdtype(asorted.dtype, np.inexact):
         # avoid inf / x = masked
