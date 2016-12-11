@@ -706,6 +706,14 @@ class TestNanFunctions_Median(TestCase):
             a = np.array([[np.inf, np.inf], [np.inf, np.inf]])
             assert_equal(np.nanmedian(a, axis=1), np.inf)
 
+            for i in range(0, 10):
+                for j in range(1, 10):
+                    a = np.array([([np.nan] * i) + ([np.inf] * j)] * 2)
+                    assert_equal(np.nanmedian(a), np.inf)
+                    assert_equal(np.nanmedian(a, axis=1), np.inf)
+                    assert_equal(np.nanmedian(a, axis=0),
+                                 ([np.nan] * i) + [np.inf] * j)
+
 
 class TestNanFunctions_Percentile(TestCase):
 

@@ -699,19 +699,18 @@ def median(a, axis=None, out=None, overwrite_input=False, keepdims=False):
         return r
 
 def _median(a, axis=None, out=None, overwrite_input=False):
-    if np.issubdtype(a.dtype, np.inexact):
-        fill_value = np.inf
-    else:
-        fill_value = None
+    # sort masked elements to beginning and index the median from the end of the array
+    # sorting to the end does not work as we need to distinguish NaN and Inf to
+    # return NaN for unmasked NaN entries like the regular median
     if overwrite_input:
         if axis is None:
             asorted = a.ravel()
-            asorted.sort(fill_value=fill_value)
+            asorted.sort(endwith=False)
         else:
-            a.sort(axis=axis, fill_value=fill_value)
+            a.sort(axis=axis, endwith=False)
             asorted = a
     else:
-        asorted = sort(a, axis=axis, fill_value=fill_value)
+        asorted = sort(a, axis=axis, endwith=False)
 
     if axis is None:
         axis = 0
@@ -719,7 +718,9 @@ def _median(a, axis=None, out=None, overwrite_input=False):
         axis += asorted.ndim
 
     if asorted.ndim == 1:
-        idx, odd = divmod(count(asorted), 2)
+        counts = count(asorted)
+        idx, odd = divmod(counts, 2)
+        idx += (asorted.size - counts)
         mid = asorted[idx + odd - 1 : idx + 1]
         if np.issubdtype(asorted.dtype, np.inexact) and asorted.size > 0:
             # avoid inf / x = masked
@@ -730,7 +731,7 @@ def _median(a, axis=None, out=None, overwrite_input=False):
             return mid.mean(out=out)
 
     counts = count(asorted, axis=axis)
-    h = counts // 2
+    h = (counts // 2) + (asorted.shape[axis] - counts)
 
     # create indexing mesh grid for all but reduced axis
     axes_grid = [np.arange(x) for i, x in enumerate(asorted.shape)
@@ -738,14 +739,19 @@ def _median(a, axis=None, out=None, overwrite_input=False):
     ind = np.meshgrid(*axes_grid, sparse=True, indexing='ij')
 
     # insert indices of low and high median
-    ind.insert(axis, np.maximum(0, h - 1))
+    ind.insert(axis, h - 1)
     low = asorted[tuple(ind)]
-    ind[axis] = h
+    ind[axis] = np.minimum(h, asorted.shape[axis] - 1)
     high = asorted[tuple(ind)]
 
     # duplicate high if odd number of elements so mean does nothing
     odd = counts % 2 == 1
     np.copyto(low, high, where=odd)
+    # not necessary for scalar True/False masks
+    try:
+        np.copyto(low.mask, high.mask, where=odd)
+    except:
+        pass
 
     if np.issubdtype(asorted.dtype, np.inexact):
         # avoid inf / x = masked
