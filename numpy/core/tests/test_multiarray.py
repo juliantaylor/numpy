@@ -2741,6 +2741,16 @@ class TestBinop(object):
         d = f.astype(np.float64)
         assert_equal(((f + f) + d).dtype, np.dtype('f8'))
 
+    def test_elide_broadcast(self):
+        # test no elision on broadcast to higher dimension
+        # only triggers elision code path in debug mode as triggering it in
+        # normal mode needs 256kb large matching dimension, so a lot of memory
+        d = np.ones((2000, 1), dtype=int)
+        b = np.ones((2000), dtype=np.bool)
+        r = (1 - d) + b
+        assert_equal(r, 1)
+        assert_equal(r.shape, (2000, 2000))
+
     def test_ufunc_override_rop_precedence(self):
         # 2016-01-29: NUMPY_UFUNC_DISABLED
         return

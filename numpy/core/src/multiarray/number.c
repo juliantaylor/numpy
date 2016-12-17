@@ -612,19 +612,14 @@ can_elide_temp(PyArrayObject * alhs, PyObject * orhs, int * cannot)
             return 0;
         }
 
-        /* too large to fit into left hand side */
-        if (PyArray_NDIM(arhs) > PyArray_NDIM(alhs)) {
-            Py_DECREF(arhs);
-            return 0;
-        }
-
         /*
          * if rhs is not a scalar dimensions must match
-         * todo: one could allow full broadcasting on equal types
+         * TODO: one could allow broadcasting on equal types
          */
-        if (PyArray_NDIM(arhs) > 0 &&
-            !PyArray_CompareLists(PyArray_DIMS(alhs), PyArray_DIMS(arhs),
-                                 PyArray_NDIM(arhs))) {
+        if (!(PyArray_NDIM(arhs) == 0 ||
+              (PyArray_NDIM(arhs) == PyArray_NDIM(alhs) &&
+               PyArray_CompareLists(PyArray_DIMS(alhs), PyArray_DIMS(arhs),
+                                    PyArray_NDIM(arhs))))) {
                 Py_DECREF(arhs);
                 return 0;
         }
