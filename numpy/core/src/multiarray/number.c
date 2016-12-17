@@ -404,8 +404,11 @@ array_inplace_right_shift(PyArrayObject *m1, PyObject *m2);
 #ifndef Py_DEBUG
 #define NPY_MIN_ELIDE_BYTES (256 * 1024)
 #else
-/* in debug mode always elide */
-#define NPY_MIN_ELIDE_BYTES (0)
+/*
+ * in debug mode always elide but skip scalars as these can convert to 0d array
+ * during in place operations
+ */
+#define NPY_MIN_ELIDE_BYTES (32)
 #endif
 #include <dlfcn.h>
 #include <execinfo.h>

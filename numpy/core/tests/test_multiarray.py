@@ -2751,6 +2751,11 @@ class TestBinop(object):
         assert_equal(r, 1)
         assert_equal(r.shape, (2000, 2000))
 
+    def test_elide_scalar(self):
+        # check inplace op does not create ndarray from scalars
+        a = np.bool_()
+        assert_(type(~(a & a)) is np.bool_)
+
     def test_ufunc_override_rop_precedence(self):
         # 2016-01-29: NUMPY_UFUNC_DISABLED
         return
