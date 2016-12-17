@@ -2718,8 +2718,20 @@ class TestBinop(object):
 
     def test_temporary_with_cast(self):
         # check that we don't elide into a temporary which would need casting
-        d = np.ones(100000, dtype=np.int64)
+        d = np.ones(200000, dtype=np.int64)
         assert_equal(((d + d) + 2**222).dtype, np.dtype('O'))
+
+        r = ((d + d) / 2)
+        assert_equal(r.dtype, np.dtype('f8'))
+
+        r = np.true_divide((d + d), 2)
+        assert_equal(r.dtype, np.dtype('f8'))
+
+        r = ((d + d) / 2.)
+        assert_equal(r.dtype, np.dtype('f8'))
+
+        r = ((d + d) // 2)
+        assert_equal(r.dtype, np.dtype(np.int64))
 
         # commutative elision into the astype result
         f = np.ones(100000, dtype=np.float32)

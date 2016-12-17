@@ -360,6 +360,14 @@ static PyObject *
 array_inplace_subtract(PyArrayObject *m1, PyObject *m2);
 static PyObject *
 array_inplace_multiply(PyArrayObject *m1, PyObject *m2);
+#if !defined(NPY_PY3K)
+static PyObject *
+array_inplace_divide(PyArrayObject *m1, PyObject *m2);
+#endif
+static PyObject *
+array_inplace_true_divide(PyArrayObject *m1, PyObject *m2);
+static PyObject *
+array_inplace_floor_divide(PyArrayObject *m1, PyObject *m2);
 static PyObject *
 array_inplace_bitwise_and(PyArrayObject *m1, PyObject *m2);
 static PyObject *
@@ -375,16 +383,14 @@ array_inplace_right_shift(PyArrayObject *m1, PyObject *m2);
 /*
  * helper functions to convert operations to inplace operations when refcount
  * is 1 and we are called from python
- * TODO divide can probably be handled with some extra checks (e.g. avoid on
- * type changes like mm->d)
  */
-#if defined HAVE_BACKTRACE && HAVE_DLFCN_H && ! defined PYPY_VERSION
+#if defined HAVE_BACKTRACE && defined HAVE_DLFCN_H && ! defined PYPY_VERSION
 /* 1 prints elided operations, 2 prints stacktraces */
 #define NPY_ELIDE_DEBUG 0
 #define NPY_MAX_STACKSIZE 10
 
 #if PY_VERSION_HEX >= 0x03060000
-/* TODO pep523 method could be used to skip all the backtrace checks */
+/* TODO can pep523 be used to somehow? */
 #define PYFRAMEEVAL_FUNC "_PyEval_EvalFrameDefault"
 #else
 #define PYFRAMEEVAL_FUNC "PyEval_EvalFrameEx"
@@ -395,7 +401,12 @@ array_inplace_right_shift(PyArrayObject *m1, PyObject *m2);
  * Measurements with 10 stacks show it getting worthwhile around 100KiB but to
  * be conservative put it higher around where the L2 cache spills.
  */
-#define NPY_MIN_ELIDE_BYTES (160 * 1024)
+#ifndef Py_DEBUG
+#define NPY_MIN_ELIDE_BYTES (256 * 1024)
+#else
+/* in debug mode always elide */
+#define NPY_MIN_ELIDE_BYTES (0)
+#endif
 #include <dlfcn.h>
 #include <execinfo.h>
 
@@ -733,7 +744,11 @@ array_multiply(PyArrayObject *m1, PyObject *m2)
 static PyObject *
 array_divide(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__div__", "__rdiv__", 0, nb_divide);
+    if (try_binary_elide(m1, m2, &array_inplace_divide, &res, 0)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.divide);
 }
 #endif
@@ -1111,14 +1126,24 @@ array_inplace_bitwise_xor(PyArrayObject *m1, PyObject *m2)
 static PyObject *
 array_floor_divide(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__floordiv__", "__rfloordiv__", 0, nb_floor_divide);
+    if (try_binary_elide(m1, m2, &array_inplace_floor_divide, &res, 0)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.floor_divide);
 }
 
 static PyObject *
 array_true_divide(PyArrayObject *m1, PyObject *m2)
 {
+    PyObject * res;
     GIVE_UP_IF_HAS_RIGHT_BINOP(m1, m2, "__truediv__", "__rtruediv__", 0, nb_true_divide);
+    if (PyArray_CheckExact(m1) &&
+            (PyArray_ISFLOAT(m1) || PyArray_ISCOMPLEX(m1)) &&
+            try_binary_elide(m1, m2, &array_inplace_true_divide, &res, 0)) {
+        return res;
+    }
     return PyArray_GenericBinaryFunction(m1, m2, n_ops.true_divide);
 }
 
