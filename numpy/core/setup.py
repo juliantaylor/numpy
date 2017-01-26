@@ -867,10 +867,8 @@ def configuration(parent_package='',top_path=None):
 
         subpath = join('src', 'umath')
         sources = [
-            join(local_dir, subpath, 'loops.h.src'),
-            join(local_dir, subpath, 'loops.c.src'),
-            join(local_dir, subpath, 'scalarmath.c.src'),
-            join(local_dir, subpath, 'simd.inc.src')]
+                   join(local_dir, subpath, 'logical_gufuncs.c.src')
+                  ]
 
         # numpy.distutils generate .c from .c.src in weird directories, we have
         # to add them there as they depend on the build_dir
@@ -919,7 +917,8 @@ def configuration(parent_package='',top_path=None):
                                  [generate_config_h,
                                  generate_numpyconfig_h,
                                  generate_umath_c,
-                                 generate_ufunc_api],
+                                 generate_ufunc_api,
+                                 generate_umath_templated_sources],
                          depends=deps + umath_deps,
                          libraries=['npymath'],
                          )
