@@ -17,6 +17,7 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "structmember.h"
+#include "frameobject.h"
 
 #define NPY_NO_DEPRECATED_API NPY_API_VERSION
 #define _MULTIARRAYMODULE
@@ -4102,11 +4103,39 @@ array_shares_memory(PyObject *NPY_UNUSED(ignored), PyObject *args, PyObject *kwd
     return array_shares_memory_impl(args, kwds, NPY_MAY_SHARE_EXACT, 1);
 }
 
+#include <stdio.h>
+#include <opcode.h>
+PyObject *
+myframe(PyFrameObject *f, int throwflag)
+{
+    PyCodeObject * co = f->f_code;
+    Py_ssize_t n = PyBytes_Size(co->co_code);
+    Py_ssize_t extended_arg = 0;
+    char * op = PyBytes_AS_STRING(co->co_code);
+    char arg = 0;
+    printf("frame %zd\n", n);
+    Py_ssize_t i;
+    for (i=0; i < n; i+=2) {
+        if (op[i] > HAVE_ARGUMENT) {
+            arg = op[i+1] | extended_arg;
+            extended_arg = op == EXTENDED_ARG ? (arg << 8) : 0;
+        }
+        printf("%zd op %d, arg %d %d\n", i, op[i], op[i] > HAVE_ARGUMENT, arg);
+    }
+    return _PyEval_EvalFrameDefault(f, throwflag);
+
+}
+
 
 static PyObject *
 array_may_share_memory(PyObject *NPY_UNUSED(ignored), PyObject *args, PyObject *kwds)
 {
-    return array_shares_memory_impl(args, kwds, NPY_MAY_SHARE_BOUNDS, 0);
+
+    PyThreadState *tstate = PyThreadState_GET();
+    puts("enabled");
+    tstate->interp->eval_frame = myframe;
+    PyObject * ret = array_shares_memory_impl(args, kwds, NPY_MAY_SHARE_BOUNDS, 0);
+    return ret;
 }
 
 
@@ -4549,6 +4578,10 @@ static struct PyModuleDef moduledef = {
 };
 #endif
 
+PyObject *
+PyEval_EvalFrameEx(PyFrameObject *f, int throwflag);
+
+
 /* Initialization function for the module */
 #if defined(NPY_PY3K)
 #define RETVAL m
@@ -4559,6 +4592,7 @@ PyMODINIT_FUNC initmultiarray(void) {
 #endif
     PyObject *m, *d, *s;
     PyObject *c_api;
+
 
     /* Create the module and add the functions */
 #if defined(NPY_PY3K)
