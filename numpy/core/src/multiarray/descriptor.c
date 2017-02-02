@@ -1162,11 +1162,17 @@ _convert_from_dict(PyObject *obj, int align)
         if (len == 3) {
             PyTuple_SET_ITEM(tup, 2, title);
         }
-        name = PyObject_GetItem(names, ind);
-        if (!name) {
+        if (ret == NPY_FAIL) {
+            Py_DECREF(ind);
+            Py_DECREF(tup);
             goto fail;
         }
+        name = PyObject_GetItem(names, ind);
         Py_DECREF(ind);
+        if (!name) {
+            Py_DECREF(tup);
+            goto fail;
+        }
 #if defined(NPY_PY3K)
         if (!PyUString_Check(name)) {
 #else
@@ -1175,6 +1181,8 @@ _convert_from_dict(PyObject *obj, int align)
             PyErr_SetString(PyExc_ValueError,
                     "field names must be strings");
             ret = NPY_FAIL;
+            Py_DECREF(tup);
+            goto fail;
         }
 
         /* Insert into dictionary */
@@ -1182,6 +1190,8 @@ _convert_from_dict(PyObject *obj, int align)
             PyErr_SetString(PyExc_ValueError,
                     "name already used as a name or title");
             ret = NPY_FAIL;
+            Py_DECREF(tup);
+            goto fail;
         }
         PyDict_SetItem(fields, name, tup);
         Py_DECREF(name);
@@ -1195,6 +1205,8 @@ _convert_from_dict(PyObject *obj, int align)
                     PyErr_SetString(PyExc_ValueError,
                             "title already used as a name or title.");
                     ret=NPY_FAIL;
+                    Py_DECREF(tup);
+                    goto fail;
                 }
                 PyDict_SetItem(fields, title, tup);
             }
