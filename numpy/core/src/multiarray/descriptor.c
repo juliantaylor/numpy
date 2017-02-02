@@ -1041,8 +1041,11 @@ _convert_from_dict(PyObject *obj, int align)
     }
     n = PyObject_Length(names);
     offsets = Borrowed_PyMapping_GetItemString(obj, "offsets");
+    if (!offsets) {
+        PyErr_Clear();
+    }
     titles = Borrowed_PyMapping_GetItemString(obj, "titles");
-    if (!offsets || !titles) {
+    if (!titles) {
         PyErr_Clear();
     }
 
