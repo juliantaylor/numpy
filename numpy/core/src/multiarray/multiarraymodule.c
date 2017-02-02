@@ -4105,6 +4105,13 @@ array_shares_memory(PyObject *NPY_UNUSED(ignored), PyObject *args, PyObject *kwd
 
 #include <stdio.h>
 #include <opcode.h>
+#define REP3(fun) \
+    if (op[i + 4] == BINARY_##fun) { \
+        puts("replace"); \
+        op[i + 4] = INPLACE_##fun; \
+        op[i + 5] = 0; \
+    }
+
 PyObject *
 myframe(PyFrameObject *f, int throwflag)
 {
@@ -4113,14 +4120,21 @@ myframe(PyFrameObject *f, int throwflag)
     Py_ssize_t extended_arg = 0;
     char * op = PyBytes_AS_STRING(co->co_code);
     char arg = 0;
-    printf("frame %zd\n", n);
+    //printf("frame %zd\n", n);
     Py_ssize_t i;
     for (i=0; i < n; i+=2) {
         if (op[i] > HAVE_ARGUMENT) {
             arg = op[i+1] | extended_arg;
             extended_arg = op == EXTENDED_ARG ? (arg << 8) : 0;
         }
-        printf("%zd op %d, arg %d %d\n", i, op[i], op[i] > HAVE_ARGUMENT, arg);
+        if (i + 3 < n &&
+            (op[i] == BINARY_ADD || op[i] == BINARY_SUBTRACT ||
+             op[i] == BINARY_MULTIPLY)) {
+            REP3(ADD);
+            REP3(SUBTRACT);
+            REP3(MULTIPLY);
+        }
+        //printf("%zd op %d, arg %d %d\n", i, op[i], op[i] > HAVE_ARGUMENT, arg);
     }
     return _PyEval_EvalFrameDefault(f, throwflag);
 
