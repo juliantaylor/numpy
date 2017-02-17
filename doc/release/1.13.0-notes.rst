@@ -65,6 +65,17 @@ implement ``__len__`` as the number of record fields, ``bool`` of scalar dtypes
 would evaluate to ``False``, which was unintuitive. Now ``bool(dtype) == True``
 for all dtypes.
 
+``__getslice__`` and ``__setslice__`` have been removed from ``ndarray``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When subclassing np.ndarray in Python 2.7, it is no longer _necessary_ to
+implement ``__*slice__`` on the derived class, as ``__*item__`` will intercept
+these calls correctly.
+
+Any code that did implement these will work exactly as before, with the
+obvious exception of any code that tries to directly call
+``ndarray.__getslice__`` (e.g. through ``super(...).__getslice__``). In
+this case, ``.__getitem__(slice(start, end))`` will act as a replacement.
+
 
 C API
 ~~~~~
@@ -105,8 +116,75 @@ Performance improvements for ``packbits`` and ``unpackbits``
 The functions ``numpy.packbits`` with boolean input and ``numpy.unpackbits`` have
 been optimized to be a significantly faster for contiguous data.
 
+Fix for PPC long double floating point information
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In previous versions of numpy, the ``finfo`` function returned invalid
+information about the `double double`_ format of the ``longdouble`` float type
+on Power PC (PPC).  The invalid values resulted from the failure of the numpy
+algorithm to deal with the `variable number of digits in the significand
+<https://www.ibm.com/support/knowledgecenter/en/ssw_aix_71/com.ibm.aix.genprogc/128bit_long_double_floating-point_datatype.htm>`_
+that are a feature of PPC long doubles.  This release by-passes the failing
+algorithm by using heuristics to detect the presence of the PPC double double
+format.  A side-effect of using these heuristics is that the ``finfo``
+function is faster than previous releases.
+
+.. _issues: https://github.com/numpy/numpy/issues/2669
+
+.. _double double: https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic
+
+Support for returning arrays of arbitrary dimensionality in `apply_along_axis`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Previously, only scalars or 1D arrays could be returned by the function passed
+to `apply_along_axis`. Now, it can return an array of any dimensionality
+(including 0D), and the shape of this array replaces the axis of the array
+being iterated over.
+
+
 Changes
 =======
+
+Ufunc behavior for overlapping inputs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Operations where ufunc input and output operands have memory overlap
+produced undefined results in previous Numpy versions, due to data
+dependency issues. In Numpy 1.13.0, results from such operations are
+now defined to be the same as for equivalent operations where there is
+no memory overlap.
+
+Operations affected now make temporary copies, as needed to eliminate
+data dependency. As detecting these cases is computationally
+expensive, a heuristic is used, which may in rare cases result to
+needless temporary copies.  For operations where the data dependency
+is simple enough for the heuristic to analyze, temporary copies will
+not be made even if the arrays overlap, if it can be deduced copies
+are not necessary.  As an example,``np.add(a, b, out=a)`` will not
+involve copies.
+
+To illustrate a previously undefined operation
+
+>>> x = np.arange(16).astype(float)
+>>> np.add(x[1:], x[:-1], out=x[1:])
+
+In Numpy 1.13.0 the last line is guaranteed to be equivalent to
+
+>>> np.add(x[1:].copy(), x[:-1].copy(), out=x[1:])
+
+A similar operation with simple non-problematic data dependence is
+
+>>> x = np.arange(16).astype(float)
+>>> np.add(x[1:], x[:-1], out=x[:-1])
+
+It will continue to produce the same results as in previous Numpy
+versions, and will not involve unnecessary temporary copies.
+
+The change applies also to in-place binary operations, for example:
+
+>>> x = np.random.rand(500, 500)
+>>> x += x.T
+
+This statement is now guaranteed to be equivalent to ``x[...] = x + x.T``,
+whereas in previous Numpy versions the results were undefined.
 
 ``average`` now preserves subclasses
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

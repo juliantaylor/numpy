@@ -638,7 +638,7 @@ def histogram(a, bins=10, range=None, normed=False, weights=None,
     >>> rng = np.random.RandomState(10)  # deterministic random data
     >>> a = np.hstack((rng.normal(size=1000),
     ...                rng.normal(loc=5, scale=2, size=1000)))
-    >>> plt.hist(a, bins='auto')  # plt.hist passes it's arguments to np.histogram
+    >>> plt.hist(a, bins='auto')  # plt.hist passes its arguments to np.histogram
     >>> plt.title("Histogram with 'auto' bins")
     >>> plt.show()
 
@@ -1027,9 +1027,16 @@ def average(a, axis=None, weights=None, returned=False):
     a : array_like
         Array containing data to be averaged. If `a` is not an array, a
         conversion is attempted.
-    axis : int, optional
-        Axis along which to average `a`. If `None`, averaging is done over
-        the flattened array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to average `a`.  The default,
+        axis=None, will average over all of the elements of the input array.
+        If axis is negative it counts from the last to the first axis.
+
+        .. versionadded:: 1.7.0
+
+        If axis is a tuple of ints, averaging is performed on all of the axes
+        specified in the tuple instead of a single axis or all the axes as
+        before.
     weights : array_like, optional
         An array of weights associated with the values in `a`. Each value in
         `a` contributes to the average according to its associated weight.
@@ -4498,23 +4505,20 @@ def meshgrid(*xi, **kwargs):
             "Valid values for `indexing` are 'xy' and 'ij'.")
 
     s0 = (1,) * ndim
-    output = [np.asanyarray(x).reshape(s0[:i] + (-1,) + s0[i + 1::])
+    output = [np.asanyarray(x).reshape(s0[:i] + (-1,) + s0[i + 1:])
               for i, x in enumerate(xi)]
-
-    shape = [x.size for x in output]
 
     if indexing == 'xy' and ndim > 1:
         # switch first and second axis
-        output[0].shape = (1, -1) + (1,)*(ndim - 2)
-        output[1].shape = (-1, 1) + (1,)*(ndim - 2)
-        shape[0], shape[1] = shape[1], shape[0]
+        output[0].shape = (1, -1) + s0[2:]
+        output[1].shape = (-1, 1) + s0[2:]
+
+    if not sparse:
+        # Return the full N-D matrix (not only the 1-D vector)
+        output = np.broadcast_arrays(*output, subok=True)
 
     if copy_:
         output = [x.copy() for x in output]
-
-    if not sparse and len(output) > 0:
-        # Return the full N-D matrix (not only the 1-D vector)
-        output = np.broadcast_arrays(*output, subok=True)
 
     return output
 

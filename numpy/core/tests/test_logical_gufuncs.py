@@ -51,6 +51,20 @@ def test_complex():
                 for x in check_all(x1, x2):
                     yield x
 
+def test_simd():
+    for dtype in [np.float32, np.float64, np.int32]:
+        x1 = np.arange(4000, dtype=dtype)
+        x2 = x1.copy()
+        yield check, np.all_equal, x1, x2, (x1==x2).all()
+        x2[-1] = -1
+        yield check, np.all_equal, x1, x2, (x1==x2).all()
+        x2 = x1.copy()
+        x2[500] = -2
+        yield check, np.all_equal, x1, x2, (x1==x2).all()
+        x2 = x1.copy()
+        x2[0] = -3
+        yield check, np.all_equal, x1, x2, (x1==x2).all()
+
 
 if __name__ == "__main__":
     run_module_suite()

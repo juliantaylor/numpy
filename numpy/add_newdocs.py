@@ -169,6 +169,10 @@ add_newdoc('numpy.core', 'nditer',
             with one per iteration dimension, to be tracked.
           * "common_dtype" causes all the operands to be converted to
             a common data type, with copying or buffering as necessary.
+          * "copy_if_overlap" causes the iterator to determine if read
+            operands have overlap with write operands, and make temporary
+            copies as necessary to avoid overlap. False positives (needless
+            copying) are possible in some cases.
           * "delay_bufalloc" delays allocation of the buffers until
             a reset() call is made. Allows "allocate" operands to
             be initialized before their values are copied into the buffers.
@@ -208,6 +212,9 @@ add_newdoc('numpy.core', 'nditer',
             copies those elements indicated by this mask.
           * 'writemasked' indicates that only elements where the chosen
             'arraymask' operand is True will be written to.
+          * "overlap_assume_elementwise" can be used to mark operands that are
+            accessed only in the iterator order, to allow less conservative
+            copying when "copy_if_overlap" is present.
     op_dtypes : dtype or tuple of dtype(s), optional
         The required data type(s) of the operands. If copying or buffering
         is enabled, the data will be converted to/from their original types.
@@ -5029,7 +5036,7 @@ add_newdoc('numpy.core.multiarray', 'digitize',
     `bins` is monotonically decreasing. If values in `x` are beyond the
     bounds of `bins`, 0 or ``len(bins)`` is returned as appropriate. If right
     is True, then the right bin is closed so that the index ``i`` is such
-    that ``bins[i-1] < x <= bins[i]`` or bins[i-1] >= x > bins[i]`` if `bins`
+    that ``bins[i-1] < x <= bins[i]`` or ``bins[i-1] >= x > bins[i]`` if `bins`
     is monotonically increasing or decreasing, respectively.
 
     Parameters
@@ -5060,7 +5067,7 @@ add_newdoc('numpy.core.multiarray', 'digitize',
 
     See Also
     --------
-    bincount, histogram, unique
+    bincount, histogram, unique, searchsorted
 
     Notes
     -----

@@ -1452,6 +1452,22 @@ class TestSpecialMethods(TestCase):
         assert_equal(x, np.array(2))
         assert_equal(type(x), with_prepare)
 
+    def test_prepare_out(self):
+
+        class with_prepare(np.ndarray):
+            __array_priority__ = 10
+
+            def __array_prepare__(self, arr, context):
+                return np.array(arr).view(type=with_prepare)
+
+        a = np.array([1]).view(type=with_prepare)
+        x = np.add(a, a, a)
+        # Returned array is new, because of the strange
+        # __array_prepare__ above
+        assert_(not np.shares_memory(x, a))
+        assert_equal(x, np.array([2]))
+        assert_equal(type(x), with_prepare)
+
     def test_failing_prepare(self):
 
         class A(object):
@@ -2092,8 +2108,8 @@ def test_nextafter():
 def test_nextafterf():
     return _test_nextafter(np.float32)
 
-@dec.knownfailureif(sys.platform == 'win32' or on_powerpc(),
-            "Long double support buggy on win32 and PPC, ticket 1664.")
+@dec.knownfailureif(sys.platform == 'win32',
+            "Long double support buggy on win32, ticket 1664.")
 def test_nextafterl():
     return _test_nextafter(np.longdouble)
 
@@ -2115,8 +2131,8 @@ def test_spacing():
 def test_spacingf():
     return _test_spacing(np.float32)
 
-@dec.knownfailureif(sys.platform == 'win32' or on_powerpc(),
-            "Long double support buggy on win32 and PPC, ticket 1664.")
+@dec.knownfailureif(sys.platform == 'win32',
+            "Long double support buggy on win32, ticket 1664.")
 def test_spacingl():
     return _test_spacing(np.longdouble)
 

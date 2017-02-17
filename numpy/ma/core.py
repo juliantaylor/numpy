@@ -2988,8 +2988,11 @@ class MaskedArray(ndarray):
         Wraps the numpy array and sets the mask according to context.
 
         """
-        result = obj.view(type(self))
-        result._update_from(self)
+        if obj is self:  # for in-place operations
+            result = obj
+        else:
+            result = obj.view(type(self))
+            result._update_from(self)
 
         if context is not None:
             result._mask = result._mask.copy()
@@ -3017,7 +3020,7 @@ class MaskedArray(ndarray):
                     except KeyError:
                         # Domain not recognized, use fill_value instead
                         fill_value = self.fill_value
-                    result = result.copy()
+
                     np.copyto(result, fill_value, where=d)
 
                     # Update the mask
@@ -3028,7 +3031,7 @@ class MaskedArray(ndarray):
                         m = (m | d)
 
             # Make sure the mask has the proper size
-            if result.shape == () and m:
+            if result is not self and result.shape == () and m:
                 return masked
             else:
                 result._mask = m
@@ -3327,26 +3330,6 @@ class MaskedArray(ndarray):
                 self._mask.shape = self.shape
             except (AttributeError, TypeError):
                 pass
-
-    def __getslice__(self, i, j):
-        """
-        x.__getslice__(i, j) <==> x[i:j]
-
-        Return the slice described by (i, j).  The use of negative indices
-        is not supported.
-
-        """
-        return self.__getitem__(slice(i, j))
-
-    def __setslice__(self, i, j, value):
-        """
-        x.__setslice__(i, j, value) <==> x[i:j]=value
-
-        Set the slice (i,j) of a to value. If value is masked, mask those
-        locations.
-
-        """
-        self.__setitem__(slice(i, j), value)
 
     def __setmask__(self, mask, copy=False):
         """
@@ -6130,8 +6113,11 @@ class MaskedConstant(MaskedArray):
     def __array_finalize__(self, obj):
         return
 
-    def __array_wrap__(self, obj):
-        return self
+    def __array_prepare__(self, obj, context=None):
+        return self.view(MaskedArray).__array_prepare__(obj, context)
+
+    def __array_wrap__(self, obj, context=None):
+        return self.view(MaskedArray).__array_wrap__(obj, context)
 
     def __str__(self):
         return str(masked_print_option._display)
