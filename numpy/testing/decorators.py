@@ -52,7 +52,7 @@ def slow(t):
 
     """
 
-    t.slow = True
+    t.slow = False
     return t
 
 def setastest(tf=True):
