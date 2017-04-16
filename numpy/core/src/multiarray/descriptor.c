@@ -14,6 +14,7 @@
 #include "npy_pycompat.h"
 
 #include "_datetime.h"
+#include "unicode.h"
 #include "common.h"
 #include "descriptor.h"
 
@@ -235,6 +236,21 @@ is_datetime_typestr(char *type, Py_ssize_t len)
         return 0;
     }
     if (strncmp(type, "timedelta64", 11) == 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int
+is_unicode_typestr(char *type, Py_ssize_t len)
+{
+    if (len < 1 || type[0] != 'U') {
+        return 0;
+    }
+    char codec[len];
+    int elsize;
+    int n = sscanf(type, "U%d[%s]", &elsize, codec);
+    if (n >= 1) {
         return 1;
     }
     return 0;
@@ -1500,6 +1516,17 @@ PyArray_DescrConverter(PyObject *obj, PyArray_Descr **at)
             }
             return NPY_SUCCEED;
         }
+        if (is_unicode_typestr(type, len)) {
+            *at = parse_dtype_from_unicode_typestr(type, len);
+            if (*at == NULL) {
+                return NPY_FAIL;
+            }
+            /* *at has byte order '=' at this point */
+            if (!PyArray_ISNBO(endian)) {
+                (*at)->byteorder = endian;
+            }
+            return NPY_SUCCEED;
+        }
 
         /* A typecode like 'd' */
         if (len == 1) {
@@ -1828,11 +1855,12 @@ arraydescr_protocol_typestr_get(PyArray_Descr *self)
             endian = '>';
         }
     }
-    if (self->type_num == NPY_UNICODE) {
-        size >>= 2;
-    }
     if (self->type_num == NPY_OBJECT) {
         ret = PyUString_FromFormat("%c%c", endian, basic_);
+    }
+    else if (PyDataType_ISUNICODE(self)) {
+        ret = PyUString_FromString("");
+        ret = append_unicode_metastr_to_string(self, 0, ret);
     }
     else {
         ret = PyUString_FromFormat("%c%c%d", endian, basic_, size);
@@ -1902,7 +1930,9 @@ arraydescr_typename_get(PyArray_Descr *self)
         len -= suffix_len;
         res = PyUString_FromStringAndSize(typeobj->tp_name+prefix_len, len);
     }
-    if (PyTypeNum_ISFLEXIBLE(self->type_num) && self->elsize != 0) {
+    if (PyTypeNum_ISFLEXIBLE(self->type_num) &&
+        !PyTypeNum_ISUNICODE(self->type_num) && self->elsize != 0) {
+        /* TODO not correct for string? */
         PyObject *p;
         p = PyUString_FromFormat("%d", self->elsize * 8);
         PyUString_ConcatAndDel(&res, p);
@@ -1917,6 +1947,9 @@ arraydescr_typename_get(PyArray_Descr *self)
         }
 
         res = append_metastr_to_string(meta, 0, res);
+    }
+    else if (PyDataType_ISUNICODE(self)) {
+        res = append_unicode_metastr_to_string(self, 1, res);
     }
 
     return res;
@@ -3564,14 +3597,13 @@ arraydescr_construction_repr(PyArray_Descr *dtype, int includealignflag,
             }
 
         case NPY_UNICODE:
-            if (dtype->elsize == 0) {
-                return PyUString_FromFormat("'%sU'", byteorder);
+            ret = PyUString_FromString("");
+            ret = append_unicode_metastr_to_string(dtype, 0, ret);
+            if (ret == NULL) {
+                return NULL;
             }
-            else {
-                return PyUString_FromFormat("'%sU%d'", byteorder,
-                                                (int)dtype->elsize / 4);
-            }
-
+            PyUString_ConcatAndDel(&ret, PyUString_FromString("'"));
+            return ret;
         case NPY_VOID:
             if (dtype->elsize == 0) {
                 return PyUString_FromString("'V'");

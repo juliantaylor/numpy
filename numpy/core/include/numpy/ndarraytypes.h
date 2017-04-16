@@ -276,6 +276,13 @@ typedef enum {
     NPY_BUSDAY_RAISE
 } NPY_BUSDAY_ROLL;
 
+
+typedef enum {
+    NPY_UCS4 = 0,
+    NPY_LATIN1 = 1
+} NPY_UNICODE_CODEC;
+
+
 /************************************************************
  * NumPy Auxiliary Data for inner loops, sort functions, etc.
  ************************************************************/
@@ -733,6 +740,16 @@ typedef struct {
     NpyAuxData base;
     PyArray_DatetimeMetaData meta;
 } PyArray_DatetimeDTypeMetaData;
+
+typedef struct {
+    NPY_UNICODE_CODEC codec;
+} PyArray_UnicodeMetaData;
+
+typedef struct {
+    NpyAuxData base;
+    PyArray_UnicodeMetaData meta;
+} PyArray_UnicodeDTypeMetaData;
+
 
 /*
  * This structure contains an exploded view of a date-time value.
@@ -1622,6 +1639,8 @@ PyArray_CLEARFLAGS(PyArrayObject *arr, int flags)
 #define PyTypeNum_ISSTRING(type) (((type) == NPY_STRING) ||    \
                                   ((type) == NPY_UNICODE))
 
+#define PyTypeNum_ISUNICODE(type) ((type) == NPY_UNICODE)
+
 #define PyTypeNum_ISCOMPLEX(type) (((type) >= NPY_CFLOAT) &&   \
                                 ((type) <= NPY_CLONGDOUBLE))
 
@@ -1654,6 +1673,7 @@ PyArray_CLEARFLAGS(PyArrayObject *arr, int flags)
 #define PyDataType_ISFLOAT(obj) PyTypeNum_ISFLOAT(((PyArray_Descr*)(obj))->type_num)
 #define PyDataType_ISNUMBER(obj) PyTypeNum_ISNUMBER(((PyArray_Descr*)(obj))->type_num)
 #define PyDataType_ISSTRING(obj) PyTypeNum_ISSTRING(((PyArray_Descr*)(obj))->type_num)
+#define PyDataType_ISUNICODE(obj) PyTypeNum_ISUNICODE(((PyArray_Descr*)(obj))->type_num)
 #define PyDataType_ISCOMPLEX(obj) PyTypeNum_ISCOMPLEX(((PyArray_Descr*)(obj))->type_num)
 #define PyDataType_ISPYTHON(obj) PyTypeNum_ISPYTHON(((PyArray_Descr*)(obj))->type_num)
 #define PyDataType_ISFLEXIBLE(obj) PyTypeNum_ISFLEXIBLE(((PyArray_Descr*)(obj))->type_num)

@@ -64,6 +64,10 @@ def test_string_cast():
     assert_array_equal(uni_arr1, uni_arr2)
 
 
+def test_dtype_repr():
+    assert_('U5[latin1]' in repr(np.dtype('U5[latin1]')))
+    assert_("U5')" in repr(np.dtype('U5[ucs4]')))
+
 ############################################################
 #    Creation tests
 ############################################################
@@ -74,50 +78,80 @@ class create_zeros(object):
     def content_check(self, ua, ua_scalar, nbytes):
 
         # Check the length of the unicode base type
-        self.assertTrue(int(ua.dtype.str[2:]) == self.ulen)
+        if self.codec:
+            dstr = ua.dtype.str[2:-len(self.codec)]
+        else:
+            dstr = ua.dtype.str[2:]
+        self.assertEqual(int(dstr), self.ulen)
         # Check the length of the data buffer
-        self.assertTrue(buffer_length(ua) == nbytes)
+        self.assertEqual(buffer_length(ua),nbytes)
         # Small check that data in array element is ok
-        self.assertTrue(ua_scalar == u'')
+        self.assertEqual(ua_scalar, u'')
         # Encode to ascii and double check
-        self.assertTrue(ua_scalar.encode('ascii') == b'')
+        self.assertEqual(ua_scalar.encode('ascii'), b'')
         # Check buffer lengths for scalars
         if ucs4:
-            self.assertTrue(buffer_length(ua_scalar) == 0)
+            self.assertEqual(buffer_length(ua_scalar), 0)
         else:
-            self.assertTrue(buffer_length(ua_scalar) == 0)
+            self.assertEqual(buffer_length(ua_scalar), 0)
 
     def test_zeros0D(self):
         # Check creation of 0-dimensional objects
-        ua = np.zeros((), dtype='U%s' % self.ulen)
-        self.content_check(ua, ua[()], 4*self.ulen)
+        ua = np.zeros((), dtype='U%s%s' % (self.ulen, self.codec))
+        self.content_check(ua, ua[()], self.itemsize*self.ulen)
 
     def test_zerosSD(self):
         # Check creation of single-dimensional objects
-        ua = np.zeros((2,), dtype='U%s' % self.ulen)
-        self.content_check(ua, ua[0], 4*self.ulen*2)
-        self.content_check(ua, ua[1], 4*self.ulen*2)
+        ua = np.zeros((2,), dtype='U%s%s' % (self.ulen, self.codec))
+        self.content_check(ua, ua[0], self.itemsize*self.ulen*2)
+        self.content_check(ua, ua[1], self.itemsize*self.ulen*2)
 
     def test_zerosMD(self):
         # Check creation of multi-dimensional objects
-        ua = np.zeros((2, 3, 4), dtype='U%s' % self.ulen)
-        self.content_check(ua, ua[0, 0, 0], 4*self.ulen*2*3*4)
-        self.content_check(ua, ua[-1, -1, -1], 4*self.ulen*2*3*4)
+        ua = np.zeros((2, 3, 4), dtype='U%s%s' % (self.ulen, self.codec))
+        self.content_check(ua, ua[0, 0, 0], self.itemsize*self.ulen*2*3*4)
+        self.content_check(ua, ua[-1, -1, -1], self.itemsize*self.ulen*2*3*4)
 
 
 class test_create_zeros_1(create_zeros, TestCase):
     """Check the creation of zero-valued arrays (size 1)"""
     ulen = 1
+    codec = ''
+    itemsize = 4
 
 
 class test_create_zeros_2(create_zeros, TestCase):
     """Check the creation of zero-valued arrays (size 2)"""
     ulen = 2
+    codec = ''
+    itemsize = 4
 
 
 class test_create_zeros_1009(create_zeros, TestCase):
     """Check the creation of zero-valued arrays (size 1009)"""
     ulen = 1009
+    codec = ''
+    itemsize = 4
+
+class test_create_zeros_1_latin1(create_zeros, TestCase):
+    """Check the creation of zero-valued arrays (size 1)"""
+    ulen = 1
+    codec = '[latin1]'
+    itemsize = 1
+
+
+class test_create_zeros_2_latin1(create_zeros, TestCase):
+    """Check the creation of zero-valued arrays (size 2)"""
+    ulen = 2
+    codec = '[latin1]'
+    itemsize = 1
+
+
+class test_create_zeros_1009_latin1(create_zeros, TestCase):
+    """Check the creation of zero-valued arrays (size 1009)"""
+    ulen = 1009
+    codec = '[latin1]'
+    itemsize = 1
 
 
 class create_values(object):

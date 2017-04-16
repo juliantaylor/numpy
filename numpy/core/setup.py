@@ -801,6 +801,7 @@ def configuration(parent_package='',top_path=None):
             join('src', 'multiarray', 'temp_elide.c'),
             join('src', 'multiarray', 'usertypes.c'),
             join('src', 'multiarray', 'ucsnarrow.c'),
+            join('src', 'multiarray', 'unicode.c'),
             join('src', 'multiarray', 'vdot.c'),
             join('src', 'private', 'templ_common.h.src'),
             join('src', 'private', 'mem_overlap.c'),

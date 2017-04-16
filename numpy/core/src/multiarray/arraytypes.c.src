@@ -4529,6 +4529,46 @@ initialize_builtin_datetime_metadata(void)
     return 0;
 }
 
+/* A clone function for the unicode dtype metadata */
+static NpyAuxData *
+unicode_dtype_metadata_clone(NpyAuxData *data)
+{
+    PyArray_UnicodeDTypeMetaData *newdata =
+        (PyArray_UnicodeDTypeMetaData *)PyArray_malloc(
+                        sizeof(PyArray_UnicodeDTypeMetaData));
+    if (newdata == NULL) {
+        return NULL;
+    }
+
+    memcpy(newdata, data, sizeof(PyArray_UnicodeDTypeMetaData));
+
+    return (NpyAuxData *)newdata;
+}
+
+NPY_NO_EXPORT int
+initialize_builtin_unicode_metadata(void)
+{
+    PyArray_UnicodeDTypeMetaData *data;
+
+    /* Allocate memory for the metadata */
+    data = PyArray_malloc(sizeof(PyArray_UnicodeDTypeMetaData));
+    if (data == NULL) {
+        return -1;
+    }
+
+    /* Initialize the base aux data */
+    memset(data, 0, sizeof(PyArray_UnicodeDTypeMetaData));
+    data->base.free = (NpyAuxData_FreeFunc *)PyArray_free;
+    data->base.clone = unicode_dtype_metadata_clone;
+
+    /* Set to the default metadata */
+    data->meta.codec = NPY_UCS4;
+
+    _builtin_descrs[NPY_UNICODE]->c_metadata = (NpyAuxData *)data;
+
+    return 0;
+}
+
 /*
  *****************************************************************************
  **                             SETUP TYPE INFO                             **
@@ -4598,6 +4638,10 @@ set_typeinfo(PyObject *dict)
     /**end repeat**/
 
     if (initialize_builtin_datetime_metadata() < 0) {
+        return -1;
+    }
+
+    if (initialize_builtin_unicode_metadata() < 0) {
         return -1;
     }
 
