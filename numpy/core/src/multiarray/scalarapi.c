@@ -16,6 +16,7 @@
 #include "ctors.h"
 #include "descriptor.h"
 #include "scalartypes.h"
+#include "unicode.h"
 
 #include "common.h"
 
@@ -631,6 +632,7 @@ PyArray_Scalar(void *data, PyArray_Descr *descr, PyObject *base)
     int type_num;
     int itemsize;
     int swap;
+    PyArray_UnicodeMetaData * meta = NULL;
 
     type_num = descr->type_num;
     if (type_num == NPY_BOOL) {
@@ -651,15 +653,19 @@ PyArray_Scalar(void *data, PyArray_Descr *descr, PyObject *base)
         while(itemsize && *dptr-- == 0) {
             itemsize--;
         }
-        if (type_num == NPY_UNICODE && itemsize) {
-            /*
-             * make sure itemsize is a multiple of 4
-             * so round up to nearest multiple
-             */
-            itemsize = (((itemsize - 1) >> 2) + 1) << 2;
+        if (type_num == NPY_UNICODE) {
+            meta = get_unicode_metadata_from_dtype(descr);
+            /* TODO add character size element */
+            if (meta->codec == NPY_UCS4) {
+                /*
+                 * make sure itemsize is a multiple of 4
+                 * so round up to nearest multiple
+                 */
+                itemsize = (((itemsize - 1) >> 2) + 1) << 2;
+            }
         }
     }
-#if PY_VERSION_HEX >= 0x03030000
+#if PY_VERSION_HEX >= 0
     if (type_num == NPY_UNICODE) {
         PyObject *u, *args;
         int byteorder;
@@ -669,11 +675,16 @@ PyArray_Scalar(void *data, PyArray_Descr *descr, PyObject *base)
 #elif NPY_BYTE_ORDER == NPY_BIG_ENDIAN
         byteorder = +1;
 #else
-        #error Endianness undefined ?
+#error Endianness undefined ?
 #endif
         if (swap) byteorder *= -1;
 
-        u = PyUnicode_DecodeUTF32(data, itemsize, NULL, &byteorder);
+        if (meta->codec == NPY_LATIN1) {
+            u = PyUnicode_DecodeLatin1(data, itemsize, NULL);
+        }
+        else {
+            u = PyUnicode_DecodeUTF32(data, itemsize, NULL, &byteorder);
+        }
         if (u == NULL) {
             return NULL;
         }

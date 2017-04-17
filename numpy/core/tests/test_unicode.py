@@ -235,6 +235,49 @@ class test_create_values_1009_ucs4(create_values, TestCase):
     ucs_value = ucs4_value
 
 
+class TestUnicodeCodecsCreate(TestCase):
+    codec = '[latin1]'
+    value = b'\xfc\xe4\xf6'.decode('latin1')
+    lengths = [1, 2, 1009]
+
+    def content_check(self, ua, ua_scalar, nbytes, length):
+        # Check the length of the unicode base type
+        if self.codec:
+            dstr = ua.dtype.str[2:-len(self.codec)]
+        else:
+            dstr = ua.dtype.str[2:]
+        self.assertEqual(int(dstr), length)
+        # Check the length of the data buffer
+        self.assertEqual(buffer_length(ua), nbytes)
+        # Small check that data in array element is ok
+        self.assertEqual(ua_scalar, self.value * length)
+        self.assertEqual(ua.item(), self.value * length)
+        # Encode to UTF-8 and double check
+        self.assertEqual(ua_scalar.encode('utf-8'),
+                        (self.value * length).encode('utf-8'))
+        assert_array_equal(ua, self.value * length)
+
+    def test_values0D(self):
+        # Check creation of 0-dimensional objects with values
+        for l in self.lengths:
+            ua = np.array(self.value * l, dtype='U%s%s' % (l, self.codec))
+            self.content_check(ua, ua[()], l, l)
+
+    def test_valuesSD(self):
+        # Check creation sof single-dimensional objects with values
+        for l in self.lengths:
+            ua = np.array([self.value * l]*2, dtype='U%s%s' % (l, self.codec))
+            self.content_check(ua, ua[0], l * 2, l)
+            self.content_check(ua, ua[1], l * 2, l)
+
+    def test_valuesMD(self):
+        # Check creation of multi-dimensional objects with values
+        for l in self.lengths:
+            ua = np.array([[[self.value * l]*2]*3]*4,
+                          dtype='U%s%s' % (l, self.codec))
+            self.content_check(ua, ua[0, 0, 0], l * 2 * 3 * 4, l)
+            self.content_check(ua, ua[-1, -1, -1], l * 2 * 3 * 4, l)
+
 ############################################################
 #    Assignment tests
 ############################################################

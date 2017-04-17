@@ -14,6 +14,7 @@
 #include "buffer.h"
 #include "numpyos.h"
 #include "arrayobject.h"
+#include "unicode.h"
 
 /*************************************************************************
  ****************   Implement Buffer Protocol ****************************
@@ -387,10 +388,18 @@ _buffer_format_string(PyArray_Descr *descr, _tmp_string_t *str,
             break;
         }
         case NPY_UNICODE: {
-            /* NumPy Unicode is always 4-byte */
             char buf[128];
-            assert(descr->elsize % 4 == 0);
-            PyOS_snprintf(buf, sizeof(buf), "%dw", descr->elsize / 4);
+            PyArray_UnicodeMetaData * meta =
+                get_unicode_metadata_from_dtype(descr);
+            switch (meta->codec) {
+                case NPY_UCS4:
+                    assert(descr->elsize % 4 == 0);
+                    PyOS_snprintf(buf, sizeof(buf), "%dw", descr->elsize / 4);
+                    break;
+                case NPY_LATIN1:
+                    PyOS_snprintf(buf, sizeof(buf), "%dw", descr->elsize);
+                    break;
+            }
             if (_append_str(str, buf)) return -1;
             break;
         }

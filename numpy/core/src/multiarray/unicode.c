@@ -23,6 +23,7 @@ parse_dtype_from_unicode_typestr(char *typestr, Py_ssize_t len)
     char codec[len];
     int elsize = 0;
     /* TODO U[UCS4] */
+    /* TODO U[latin1] */
     int n = sscanf(typestr, "U%d[%s", &elsize, codec);
     if (n == 1 || n == 0) {
         meta.codec = NPY_UCS4;
