@@ -53,6 +53,7 @@ maintainer email:  oliphant.travis@ieee.org
 #include "alloc.h"
 #include "mem_overlap.h"
 #include "numpyos.h"
+#include "unicode.h"
 
 /*NUMPY_API
   Compute the size of an array (in number of items)
@@ -1083,27 +1084,33 @@ _strings_richcompare(PyArrayObject *self, PyArrayObject *other, int cmp_op,
 {
     PyArrayObject *result;
     PyArrayMultiIterObject *mit;
-    int val, cast = 0;
+    int val;
 
     /* Cast arrays to a common type */
     if (PyArray_TYPE(self) != PyArray_DESCR(other)->type_num) {
-#if defined(NPY_PY3K)
         /*
          * Comparison between Bytes and Unicode is not defined in Py3K;
          * we follow.
          */
         Py_INCREF(Py_NotImplemented);
         return Py_NotImplemented;
-#else
-        cast = 1;
-#endif  /* define(NPY_PY3K) */
     }
-    if (cast || (PyArray_ISNOTSWAPPED(self) != PyArray_ISNOTSWAPPED(other))) {
+    if (PyArray_TYPE(self) != NPY_STRING ||
+            PyArray_TYPE(other) != NPY_STRING) {
         PyObject *new;
         if (PyArray_TYPE(self) == NPY_STRING &&
                 PyArray_DESCR(other)->type_num == NPY_UNICODE) {
             PyArray_Descr* unicode = PyArray_DescrNew(PyArray_DESCR(other));
-            unicode->elsize = PyArray_DESCR(self)->elsize << 2;
+            PyArray_UnicodeMetaData * meta =
+                get_unicode_metadata_from_dtype(unicode);
+            switch (meta->codec) {
+                case NPY_UCS4:
+                    unicode->elsize = PyArray_DESCR(self)->elsize * 4;
+                    break;
+                case NPY_LATIN1:
+                    unicode->elsize = PyArray_DESCR(self)->elsize;
+                    break;
+            }
             new = PyArray_FromAny((PyObject *)self, unicode,
                                   0, 0, 0, NULL);
             if (new == NULL) {
@@ -1113,16 +1120,19 @@ _strings_richcompare(PyArrayObject *self, PyArrayObject *other, int cmp_op,
             self = (PyArrayObject *)new;
         }
         else if ((PyArray_TYPE(self) == NPY_UNICODE) &&
-                 ((PyArray_DESCR(other)->type_num == NPY_STRING) ||
-                 (PyArray_ISNOTSWAPPED(self) != PyArray_ISNOTSWAPPED(other)))) {
+                 ((PyArray_DESCR(other)->type_num == NPY_STRING))) {
             PyArray_Descr* unicode = PyArray_DescrNew(PyArray_DESCR(self));
+            PyArray_UnicodeMetaData * meta =
+                get_unicode_metadata_from_dtype(unicode);
+            switch (meta->codec) {
+                case NPY_UCS4:
+                    unicode->elsize = PyArray_DESCR(other)->elsize * 4;
+                    break;
+                case NPY_LATIN1:
+                    unicode->elsize = PyArray_DESCR(other)->elsize;
+                    break;
+            }
 
-            if (PyArray_DESCR(other)->type_num == NPY_STRING) {
-                unicode->elsize = PyArray_DESCR(other)->elsize << 2;
-            }
-            else {
-                unicode->elsize = PyArray_DESCR(other)->elsize;
-            }
             new = PyArray_FromAny((PyObject *)other, unicode,
                                   0, 0, 0, NULL);
             if (new == NULL) {
@@ -1130,6 +1140,55 @@ _strings_richcompare(PyArrayObject *self, PyArrayObject *other, int cmp_op,
             }
             Py_INCREF(self);
             other = (PyArrayObject *)new;
+        }
+        else if ((PyArray_TYPE(self) == NPY_UNICODE) &&
+                 ((PyArray_DESCR(other)->type_num == NPY_UNICODE)) ||
+                 (PyArray_ISNOTSWAPPED(self) != PyArray_ISNOTSWAPPED(other))) {
+            PyArray_Descr* self_unicode = PyArray_DescrNew(PyArray_DESCR(self));
+            PyArray_UnicodeMetaData * self_meta =
+                get_unicode_metadata_from_dtype(self_unicode);
+            PyArray_Descr* other_unicode = PyArray_DescrNew(PyArray_DESCR(other));
+            PyArray_UnicodeMetaData * other_meta =
+                get_unicode_metadata_from_dtype(other_unicode);
+            if (self_meta->codec == other_meta->codec &&
+                (PyArray_ISNOTSWAPPED(self) != PyArray_ISNOTSWAPPED(other))) {
+                self_unicode->elsize = other_unicode->elsize;
+                new = PyArray_FromAny((PyObject *)other, self_unicode,
+                                      0, 0, 0, NULL);
+                Py_DECREF(other_unicode);
+                if (new == NULL) {
+                    return NULL;
+                }
+                Py_INCREF(self);
+                other = (PyArrayObject *)new;
+            }
+            else {
+                int self_itemsize = get_unicode_codec_itemsize(self_unicode);
+                int other_itemsize = get_unicode_codec_itemsize(other_unicode);
+                if (self_itemsize >= other_itemsize) {
+                    self_unicode->elsize = other_unicode->elsize;
+                    new = PyArray_FromAny((PyObject *)other, self_unicode,
+                                          0, 0, 0, NULL);
+                    Py_DECREF(other_unicode);
+                    if (new == NULL) {
+                        return NULL;
+                    }
+                    Py_INCREF(self);
+                    other = (PyArrayObject *)new;
+                }
+                else {
+                    other_unicode->elsize = self_unicode->elsize *
+                        (other_itemsize / self_itemsize);
+                    new = PyArray_FromAny((PyObject *)self, other_unicode,
+                                          0, 0, 0, NULL);
+                    Py_DECREF(self_unicode);
+                    if (new == NULL) {
+                        return NULL;
+                    }
+                    Py_INCREF(other);
+                    self = (PyArrayObject *)new;
+                }
+            }
         }
         else {
             PyErr_SetString(PyExc_TypeError,
@@ -1162,7 +1221,18 @@ _strings_richcompare(PyArrayObject *self, PyArrayObject *other, int cmp_op,
     }
 
     if (PyArray_TYPE(self) == NPY_UNICODE) {
-        val = _compare_strings(result, mit, cmp_op, _myunincmp, rstrip);
+        PyArray_UnicodeMetaData * meta =
+            get_unicode_metadata_from_dtype(PyArray_DESCR(self));
+        switch (meta->codec) {
+            case NPY_UCS4:
+                val = _compare_strings(result, mit, cmp_op, _myunincmp,
+                                       rstrip);
+                break;
+            case NPY_LATIN1:
+                val = _compare_strings(result, mit, cmp_op, _mystrncmp,
+                                       rstrip);
+                break;
+        }
     }
     else {
         val = _compare_strings(result, mit, cmp_op, _mystrncmp, rstrip);

@@ -237,7 +237,7 @@ class test_create_values_1009_ucs4(create_values, TestCase):
 
 class TestUnicodeCodecsCreate(TestCase):
     codec = '[latin1]'
-    value = b'\xfc\xe4\xf6'.decode('latin1')
+    value = b'\xfc'.decode('latin1')
     lengths = [1, 2, 1009]
 
     def content_check(self, ua, ua_scalar, nbytes, length):
