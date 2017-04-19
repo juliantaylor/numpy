@@ -1234,6 +1234,7 @@ _strings_richcompare(PyArrayObject *self, PyArrayObject *other, int cmp_op,
                 break;
             default:
                 assert(0);
+                val = 0;
         }
     }
     else {

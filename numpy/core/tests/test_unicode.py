@@ -280,6 +280,12 @@ class TestUnicodeCodecsCreate(TestCase):
         a = np.array(self.nonlatin, dtype='U')
         assert_raises(UnicodeEncodeError, np.array, a, dtype='U6[latin1]')
 
+    def test_cast(self):
+        # TODO put in assign tests
+        a = np.arange(5)
+        a[:3] = np.array(['2', '-3', '-1'])
+        assert_array_equal(a, [2, -3, -1, 3, 4])
+
 
 class TestCodecDtype(TestCase):
     def test_base(self):

@@ -632,7 +632,6 @@ PyArray_Scalar(void *data, PyArray_Descr *descr, PyObject *base)
     int type_num;
     int itemsize;
     int swap;
-    PyArray_UnicodeMetaData * meta = NULL;
 
     type_num = descr->type_num;
     if (type_num == NPY_BOOL) {
@@ -659,7 +658,9 @@ PyArray_Scalar(void *data, PyArray_Descr *descr, PyObject *base)
              * so round up to nearest multiple
              */
             int csize = get_unicode_codec_itemsize(descr);
-            itemsize = (((itemsize - 1) / csize ) + 1) * csize;
+            if (itemsize % csize != 0) {
+                itemsize += (csize - itemsize % csize);
+            }
         }
     }
 #if PY_VERSION_HEX >= 0
@@ -676,7 +677,7 @@ PyArray_Scalar(void *data, PyArray_Descr *descr, PyObject *base)
 #endif
         if (swap) byteorder *= -1;
 
-        if (meta->codec == NPY_LATIN1) {
+        if (get_unicode_codec(descr) == NPY_LATIN1) {
             u = PyUnicode_DecodeLatin1(data, itemsize, NULL);
         }
         else {

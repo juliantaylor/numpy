@@ -1509,8 +1509,7 @@ PyArray_EquivTypes(PyArray_Descr *type1, PyArray_Descr *type2)
         return ((type_num1 == type_num2)
                 && has_equivalent_datetime_metadata(type1, type2));
     }
-    if (type_num1 == NPY_UNICODE
-            || type_num2 == NPY_UNICODE) {
+    if (type_num1 == NPY_UNICODE && type_num2 == NPY_UNICODE) {
         return same_unicode_codec(type1, type2);
     }
     return type1->kind == type2->kind;
