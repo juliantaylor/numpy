@@ -24,6 +24,7 @@
 #include "convert_datatype.h"
 #include "ctors.h"
 #include "_datetime.h"
+#include "unicode.h"
 #include "datetime_strings.h"
 
 #include "shape.h"
@@ -3673,7 +3674,9 @@ PyArray_GetDTypeTransferFunction(int aligned,
                 !PyDataType_HASFIELDS(dst_dtype) &&
                 !PyDataType_HASSUBARRAY(src_dtype) &&
                 !PyDataType_HASSUBARRAY(dst_dtype) &&
-                src_type_num != NPY_DATETIME && src_type_num != NPY_TIMEDELTA) {
+                src_type_num != NPY_DATETIME &&
+                src_type_num != NPY_TIMEDELTA &&
+                src_type_num != NPY_UNICODE) {
         /* A custom data type requires that we use its copy/swap */
         if (src_type_num >= NPY_NTYPES || dst_type_num >= NPY_NTYPES) {
             /*
@@ -3700,15 +3703,7 @@ PyArray_GetDTypeTransferFunction(int aligned,
 
         /* The special types, which have no or subelement byte-order */
         switch (src_type_num) {
-            case NPY_UNICODE:
-                /* Wrap the copy swap function when swapping is necessary */
-                if (PyArray_ISNBO(src_dtype->byteorder) !=
-                        PyArray_ISNBO(dst_dtype->byteorder)) {
-                    return wrap_copy_swap_function(aligned,
-                                    src_stride, dst_stride,
-                                    src_dtype, 1,
-                                    out_stransfer, out_transferdata);
-                }
+            /* add this back for same codec ? case NPY_UNICODE: */
             case NPY_VOID:
             case NPY_STRING:
                 *out_stransfer = PyArray_GetStridedCopyFn(0,
@@ -3784,6 +3779,9 @@ PyArray_GetDTypeTransferFunction(int aligned,
     if (src_type_num == dst_type_num) {
         switch (src_type_num) {
         case NPY_UNICODE:
+            if (!same_unicode_codec(src_dtype, dst_dtype)) {
+                break;
+            }
             if (PyArray_ISNBO(src_dtype->byteorder) !=
                                  PyArray_ISNBO(dst_dtype->byteorder)) {
                 return PyArray_GetStridedZeroPadCopyFn(0, 1,

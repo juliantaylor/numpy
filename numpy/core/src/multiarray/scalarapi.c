@@ -654,15 +654,12 @@ PyArray_Scalar(void *data, PyArray_Descr *descr, PyObject *base)
             itemsize--;
         }
         if (type_num == NPY_UNICODE) {
-            meta = get_unicode_metadata_from_dtype(descr);
-            /* TODO add character size element */
-            if (meta->codec == NPY_UCS4) {
-                /*
-                 * make sure itemsize is a multiple of 4
-                 * so round up to nearest multiple
-                 */
-                itemsize = (((itemsize - 1) >> 2) + 1) << 2;
-            }
+            /*
+             * make sure itemsize is a multiple of 4
+             * so round up to nearest multiple
+             */
+            int csize = get_unicode_codec_itemsize(descr);
+            itemsize = (((itemsize - 1) / csize ) + 1) * csize;
         }
     }
 #if PY_VERSION_HEX >= 0

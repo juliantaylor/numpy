@@ -60,6 +60,7 @@ NPY_NO_EXPORT int NPY_NUMUSERTYPES = 0;
 #include "templ_common.h" /* for npy_mul_with_overflow_intp */
 #include "compiled_base.h"
 #include "mem_overlap.h"
+#include "unicode.h"
 
 /* Only here for API compatibility */
 NPY_NO_EXPORT PyTypeObject PyBigArray_Type;
@@ -1507,6 +1508,10 @@ PyArray_EquivTypes(PyArray_Descr *type1, PyArray_Descr *type2)
             || type_num2 == NPY_TIMEDELTA) {
         return ((type_num1 == type_num2)
                 && has_equivalent_datetime_metadata(type1, type2));
+    }
+    if (type_num1 == NPY_UNICODE
+            || type_num2 == NPY_UNICODE) {
+        return same_unicode_codec(type1, type2);
     }
     return type1->kind == type2->kind;
 }

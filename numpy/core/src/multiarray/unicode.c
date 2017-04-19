@@ -112,9 +112,9 @@ int
 same_unicode_codec(const PyArray_Descr * dtype1, const PyArray_Descr * dtype2)
 {
     const PyArray_UnicodeMetaData *meta1 =
-        get_unicode_metadata_from_dtype(dtype);
+        get_unicode_metadata_from_dtype(dtype1);
     const PyArray_UnicodeMetaData *meta2 =
-        get_unicode_metadata_from_dtype(dtype);
+        get_unicode_metadata_from_dtype(dtype2);
     if (meta1 == NULL || meta2 == NULL) {
         return 0;
     }

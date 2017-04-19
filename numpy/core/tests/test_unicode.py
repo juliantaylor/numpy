@@ -5,7 +5,8 @@ import sys
 import numpy as np
 from numpy.compat import unicode
 from numpy.testing import (
-    TestCase, run_module_suite, assert_, assert_equal, assert_array_equal)
+    TestCase, run_module_suite, assert_, assert_equal, assert_array_equal,
+    assert_raises)
 
 # Guess the UCS length for this python interpreter
 if sys.version_info[:2] >= (3, 3):
@@ -63,10 +64,6 @@ def test_string_cast():
         assert_(str_arr != uni_arr2)
     assert_array_equal(uni_arr1, uni_arr2)
 
-
-def test_dtype_repr():
-    assert_('U5[latin1]' in repr(np.dtype('U5[latin1]')))
-    assert_("U5')" in repr(np.dtype('U5[ucs4]')))
 
 ############################################################
 #    Creation tests
@@ -238,6 +235,7 @@ class test_create_values_1009_ucs4(create_values, TestCase):
 class TestUnicodeCodecsCreate(TestCase):
     codec = '[latin1]'
     value = b'\xfc'.decode('latin1')
+    nonlatin = b'\xd1\xa2'.decode('UTF-8')
     lengths = [1, 2, 1009]
 
     def content_check(self, ua, ua_scalar, nbytes, length):
@@ -251,10 +249,10 @@ class TestUnicodeCodecsCreate(TestCase):
         self.assertEqual(buffer_length(ua), nbytes)
         # Small check that data in array element is ok
         self.assertEqual(ua_scalar, self.value * length)
-        self.assertEqual(ua.item(), self.value * length)
+        self.assertEqual(ua.item(0), self.value * length)
         # Encode to UTF-8 and double check
         self.assertEqual(ua_scalar.encode('utf-8'),
-                        (self.value * length).encode('utf-8'))
+                         (self.value * length).encode('utf-8'))
         assert_array_equal(ua, self.value * length)
 
     def test_values0D(self):
@@ -277,6 +275,30 @@ class TestUnicodeCodecsCreate(TestCase):
                           dtype='U%s%s' % (l, self.codec))
             self.content_check(ua, ua[0, 0, 0], l * 2 * 3 * 4, l)
             self.content_check(ua, ua[-1, -1, -1], l * 2 * 3 * 4, l)
+
+    def test_encode_error(self):
+        a = np.array(self.nonlatin, dtype='U')
+        assert_raises(UnicodeEncodeError, np.array, a, dtype='U6[latin1]')
+
+
+class TestCodecDtype(TestCase):
+    def test_base(self):
+        dt = np.dtype('U5')
+        self.assertEqual(dt.itemsize, 20)
+        dt = np.dtype('U5[latin1]')
+        self.assertEqual(dt.itemsize, 5)
+        dt = np.dtype('U5[ucs4]')
+        self.assertEqual(dt.itemsize, 20)
+        #TODO
+        #dt = np.dtype('U[latin1]')
+        #self.assertEqual(dt.itemsize, 1)
+        #dt = np.dtype('U[ucs4]')
+        #self.assertEqual(dt.itemsize, 4)
+
+    def test__repr(self):
+        self.assertIn('U5[latin1]', repr(np.dtype('U5[latin1]')))
+        self.assertIn("U5')", repr(np.dtype('U5[ucs4]')))
+
 
 ############################################################
 #    Assignment tests
