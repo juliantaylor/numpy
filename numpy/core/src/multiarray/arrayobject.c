@@ -1141,8 +1141,8 @@ _strings_richcompare(PyArrayObject *self, PyArrayObject *other, int cmp_op,
             Py_INCREF(self);
             other = (PyArrayObject *)new;
         }
-        else if ((PyArray_TYPE(self) == NPY_UNICODE) &&
-                 ((PyArray_DESCR(other)->type_num == NPY_UNICODE)) ||
+        else if (((PyArray_TYPE(self) == NPY_UNICODE) &&
+                 ((PyArray_DESCR(other)->type_num == NPY_UNICODE))) ||
                  (PyArray_ISNOTSWAPPED(self) != PyArray_ISNOTSWAPPED(other))) {
             PyArray_Descr* self_unicode = PyArray_DescrNew(PyArray_DESCR(self));
             PyArray_UnicodeMetaData * self_meta =
@@ -1232,6 +1232,8 @@ _strings_richcompare(PyArrayObject *self, PyArrayObject *other, int cmp_op,
                 val = _compare_strings(result, mit, cmp_op, _mystrncmp,
                                        rstrip);
                 break;
+            default:
+                assert(0);
         }
     }
     else {
